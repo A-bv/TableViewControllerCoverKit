@@ -15,4 +15,4 @@ final class MyListViewController: CoverImageTableViewController {
 }
 ```
 
-`coverCornerRadius` and `expandedBarHeight` are tunable. Navigation-bar styling is deliberately out of scope — override `scrollViewDidScroll` (calling `super`) to drive your own chrome from the scroll position.
+The class owns the full customization: the navigation bar fades in as the list scrolls over the image, and the status bar reads light while the bar floats over the cover. Tunables: `coverCornerRadius`, `expandedBarHeight`, `barBackgroundColor`. Flip `suspendsCoverStatusBarStyle` while presenting a modal so the status bar reads normally.

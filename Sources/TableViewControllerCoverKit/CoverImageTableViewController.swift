@@ -9,9 +9,9 @@ import UIKit
 ///
 ///     setCoverImage(UIImage(named: "cover"))
 ///
-/// Navigation-bar styling is deliberately not part of this class;
-/// subclasses can override `scrollViewDidScroll` (calling super) to drive
-/// their own chrome from the scroll position.
+/// The class owns the full customization: the navigation bar fades in as
+/// the list scrolls over the image, and the status bar reads light while
+/// the bar floats over the cover.
 open class CoverImageTableViewController: UITableViewController {
 
     /// Corner radius where the list content meets the image.
@@ -20,10 +20,30 @@ open class CoverImageTableViewController: UITableViewController {
     /// Estimated expanded-bar height used to position the content's top edge.
     public var expandedBarHeight: CGFloat = 96
 
+    /// The bar's background color once it has fully faded in.
+    public var barBackgroundColor: UIColor = .systemBackground
+
+    /// Set while a modal covers this screen so the status bar reads normally.
+    public var suspendsCoverStatusBarStyle = false {
+        didSet { setNeedsStatusBarAppearanceUpdate() }
+    }
+
+    /// Negative while the bar floats over the image, 0...1 while fading in.
+    private var barFadeProgress: CGFloat = 0 {
+        didSet { setNeedsStatusBarAppearanceUpdate() }
+    }
+
+    open override var preferredStatusBarStyle: UIStatusBarStyle {
+        if suspendsCoverStatusBarStyle { return .default }
+        return barFadeProgress < 0 ? .lightContent : .default
+    }
+
     private enum Constants {
         static let scrollIndicatorPadding: CGFloat = 20
         static let vignetteIntensity = 0.12
         static let vignetteRadius = 0.2
+        static let barFadeDistance: CGFloat = 50
+        static let largeTitleFontSize: CGFloat = 31
     }
 
     private var coverImageView = UIImageView()
@@ -75,14 +95,45 @@ open class CoverImageTableViewController: UITableViewController {
         return window?.windowScene?.statusBarManager?.statusBarFrame.height ?? 0
     }
 
-    // MARK: - Spring stretch on overscroll
+    // MARK: - Scroll: bar fade + spring stretch
+
+    open override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        applyBarTransparency()
+    }
 
     open override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let offset = scrollView.contentOffset.y
+
+        let barHeight = navigationController?.navigationBar.frame.height ?? 0
+        let fadeStart = barHeight + 2 * statusBarHeight
+        barFadeProgress = min(1, (offset + fadeStart) / Constants.barFadeDistance)
+        applyBarTransparency()
+
         let bounceThreshold = -UIScreen.main.bounds.height / 2
         if offset < bounceThreshold {
             coverImageView.frame.size.height = -offset + coverCornerRadius
         }
+    }
+
+    private func applyBarTransparency() {
+        let overImage = barFadeProgress < 0
+        let textColor: UIColor = overImage ? .white : .label.withAlphaComponent(barFadeProgress)
+        let backgroundColor: UIColor = overImage ? .clear : barBackgroundColor.withAlphaComponent(barFadeProgress)
+
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = backgroundColor
+        appearance.shadowColor = .clear
+        appearance.titleTextAttributes = [.foregroundColor: textColor]
+        appearance.largeTitleTextAttributes = [
+            .foregroundColor: UIColor.white,
+            .font: UIFont.systemFont(ofSize: Constants.largeTitleFontSize, weight: .bold),
+        ]
+        navigationItem.standardAppearance = appearance
+        navigationItem.scrollEdgeAppearance = appearance
+        navigationItem.compactAppearance = appearance
+        navigationController?.navigationBar.tintColor = textColor
     }
 
     // MARK: - Vignette

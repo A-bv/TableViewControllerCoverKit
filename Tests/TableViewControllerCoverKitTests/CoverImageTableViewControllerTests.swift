@@ -32,6 +32,23 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertLessThan(rendered?.size.width ?? .infinity, 1200)
     }
 
+    func testStatusBarStyle_isLightOverTheImageAndDefaultPastIt() {
+        let sut = CoverImageTableViewController()
+        sut.loadViewIfNeeded()
+        sut.setCoverImage(makeImage())
+
+        sut.tableView.contentOffset = CGPoint(x: 0, y: -400)
+        sut.scrollViewDidScroll(sut.tableView)
+        XCTAssertEqual(sut.preferredStatusBarStyle, .lightContent)
+
+        sut.tableView.contentOffset = CGPoint(x: 0, y: 400)
+        sut.scrollViewDidScroll(sut.tableView)
+        XCTAssertEqual(sut.preferredStatusBarStyle, .default)
+
+        sut.suspendsCoverStatusBarStyle = true
+        XCTAssertEqual(sut.preferredStatusBarStyle, .default)
+    }
+
     func testOverscroll_stretchesTheCoverWithTheSpringEffect() {
         let sut = CoverImageTableViewController()
         sut.loadViewIfNeeded()
