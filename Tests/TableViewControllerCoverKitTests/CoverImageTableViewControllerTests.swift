@@ -4,17 +4,24 @@ import XCTest
 @MainActor
 final class CoverImageTableViewControllerTests: XCTestCase {
 
-    private func makeImage() -> UIImage {
-        UIGraphicsImageRenderer(size: CGSize(width: 1200, height: 1200)).image { context in
+    /// A controller with a real, laid-out view so the cover (which now sizes off the view's
+    /// own bounds) has something to render into.
+    private func makeSUT(width: CGFloat = 390, height: CGFloat = 844) -> CoverImageTableViewController {
+        let sut = CoverImageTableViewController()
+        sut.view.frame = CGRect(x: 0, y: 0, width: width, height: height)
+        sut.view.layoutIfNeeded()
+        return sut
+    }
+
+    private func makeImage(_ side: CGFloat = 1200) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { context in
             UIColor.systemPurple.setFill()
-            context.fill(CGRect(x: 0, y: 0, width: 1200, height: 1200))
+            context.fill(CGRect(x: 0, y: 0, width: side, height: side))
         }
     }
 
     func testSetCoverImage_installsTheBackgroundAndPushesContentDown() {
-        let sut = CoverImageTableViewController()
-        sut.loadViewIfNeeded()
-
+        let sut = makeSUT()
         sut.setCoverImage(makeImage())
 
         XCTAssertNotNil(sut.tableView.backgroundView)
@@ -22,9 +29,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
     }
 
     func testSetCoverImage_rendersAtDisplaySizeNotSourceSize() {
-        let sut = CoverImageTableViewController()
-        sut.loadViewIfNeeded()
-
+        let sut = makeSUT()
         sut.setCoverImage(makeImage())
 
         let cover = sut.tableView.backgroundView?.subviews.first as? UIImageView
@@ -32,8 +37,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
     }
 
     func testStatusBarStyle_isLightOverTheImageAndDefaultPastIt() {
-        let sut = CoverImageTableViewController()
-        sut.loadViewIfNeeded()
+        let sut = makeSUT()
         sut.setCoverImage(makeImage())
 
         sut.tableView.contentOffset = CGPoint(x: 0, y: -400)
@@ -49,16 +53,32 @@ final class CoverImageTableViewControllerTests: XCTestCase {
     }
 
     func testOverscroll_stretchesTheCoverWithTheSpringEffect() {
-        let sut = CoverImageTableViewController()
-        sut.loadViewIfNeeded()
+        let sut = makeSUT()
         sut.setCoverImage(makeImage())
 
         let cover = sut.tableView.backgroundView?.subviews.first as? UIImageView
         let restingHeight = cover?.frame.height ?? 0
 
-        sut.tableView.contentOffset = CGPoint(x: 0, y: -UIScreen.main.bounds.height)
+        sut.tableView.contentOffset = CGPoint(x: 0, y: -sut.view.bounds.height)
         sut.scrollViewDidScroll(sut.tableView)
 
         XCTAssertGreaterThan(cover?.frame.height ?? 0, restingHeight)
+    }
+
+    func testResize_reRendersCoverAndInsetsForTheNewBounds() {
+        let sut = makeSUT(width: 390, height: 844)
+        sut.setCoverImage(makeImage())
+
+        let cover = { sut.tableView.backgroundView?.subviews.first as? UIImageView }
+        let portraitInset = sut.tableView.contentInset.top
+        let portraitCoverHeight = cover()?.frame.height
+
+        // Simulate a rotation / resize to a shorter, wider layout.
+        sut.view.frame = CGRect(x: 0, y: 0, width: 844, height: 390)
+        sut.view.layoutIfNeeded()
+
+        XCTAssertNotEqual(portraitInset, sut.tableView.contentInset.top)
+        XCTAssertNotEqual(portraitCoverHeight, cover()?.frame.height)
+        XCTAssertEqual(cover()?.frame.height ?? 0, 390 / 2 + sut.coverCornerRadius, accuracy: 0.5)
     }
 }

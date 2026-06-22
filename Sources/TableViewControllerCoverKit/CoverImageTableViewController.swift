@@ -50,7 +50,19 @@ open class CoverImageTableViewController: UITableViewController {
     }
 
     private var coverImageView = UIImageView()
+    private var coverBackgroundView = UIView()
     private static let vignetteContext = CIContext()
+
+    /// The source image, kept so the cover can be re-rendered when the view's size changes
+    /// (rotation, iPad multitasking, non-fullscreen scenes) without the caller re-supplying it.
+    private var sourceImage: UIImage?
+
+    /// The display size the cover was last rendered at; guards against re-running the vignette
+    /// on every layout pass when nothing has changed.
+    private var installedCoverSize: CGSize = .zero
+
+    /// Whether the content has been rested below the cover yet (done once, on first install).
+    private var hasPositionedContent = false
 
     /// The navigation bar's collapsed height, used to anchor the fade. Large titles make
     /// `navigationBar.frame.height` swing (≈96 expanded → its standard height once collapsed),
@@ -60,35 +72,58 @@ open class CoverImageTableViewController: UITableViewController {
 
     // MARK: - Cover image
 
-    /// Installs `image` behind the list — rendered at display size with the vignette
-    /// applied once — and pushes the content below the image's visible half. Passing nil
-    /// keeps the previous image and only refreshes the layout.
+    /// Installs `image` behind the list — rendered at display size with the vignette applied
+    /// once — and pushes the content below the image's visible half. Passing nil keeps the
+    /// previous image and only refreshes the layout. The cover is sized off the actual view
+    /// bounds and re-renders itself when those change, so it survives rotation and resizing.
     public func setCoverImage(_ image: UIImage?) {
-        if let image {
-            coverImageView = UIImageView(image: resizedToDisplay(image))
+        if let image { sourceImage = image }
+        installedCoverSize = .zero          // force a re-render for the new image / refresh
+        installCoverIfNeeded()
+    }
+
+    open override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        installCoverIfNeeded()
+    }
+
+    /// Renders the cover at the current display size and refreshes the insets, but only when
+    /// that size actually changed — so rotation and resize are handled without re-running the
+    /// vignette on every layout pass.
+    private func installCoverIfNeeded() {
+        guard sourceImage != nil else { return }     // nothing to install until given an image
+        let size = coverDisplaySize
+        guard size.width > 0, size.height > 0, size != installedCoverSize else { return }
+        installedCoverSize = size
+
+        if let sourceImage {
+            coverImageView.image = vignetted(resizedToDisplay(sourceImage))
         }
         coverImageView.contentMode = .scaleAspectFill
         coverImageView.clipsToBounds = true
-        coverImageView.layer.frame = CGRect(origin: .zero, size: coverDisplaySize)
+        coverImageView.frame = CGRect(origin: .zero, size: size)
 
-        let backgroundView = UIView()
-        backgroundView.addSubview(coverImageView)
-        tableView.backgroundView = backgroundView
-
-        applyVignette()
+        if coverImageView.superview == nil { coverBackgroundView.addSubview(coverImageView) }
+        tableView.backgroundView = coverBackgroundView
         configureContentInsets()
+
+        // The inset is first applied here, after the scroll view has already initialised its
+        // offset, so rest the content below the cover once. (Setting the inset in viewDidLoad —
+        // before first layout — used to let the system do this, but it needs the real bounds.)
+        if !hasPositionedContent {
+            hasPositionedContent = true
+            tableView.contentOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top)
+        }
     }
 
     private var coverDisplaySize: CGSize {
-        CGSize(
-            width: UIScreen.main.bounds.width,
-            height: UIScreen.main.bounds.height / 2 + coverCornerRadius)
+        CGSize(width: view.bounds.width, height: view.bounds.height / 2 + coverCornerRadius)
     }
 
     private func configureContentInsets() {
-        let halfScreen = UIScreen.main.bounds.height / 2
-        let topInset = halfScreen - (expandedBarHeight + statusBarHeight)
-        let indicatorInset = (halfScreen - expandedBarHeight)
+        let halfHeight = view.bounds.height / 2
+        let topInset = halfHeight - (expandedBarHeight + statusBarHeight)
+        let indicatorInset = (halfHeight - expandedBarHeight)
             + coverCornerRadius + Constants.scrollIndicatorPadding
 
         tableView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: 0, right: 0)
@@ -152,14 +187,14 @@ open class CoverImageTableViewController: UITableViewController {
 
     // MARK: - Vignette
 
-    /// Rendered once into a bitmap; a CIImage-backed image would re-run the filter on
-    /// every draw while the stretch resizes the view per frame.
-    private func applyVignette() {
+    /// Baked into a bitmap once per size; a CIImage-backed image would re-run the filter on
+    /// every draw while the stretch resizes the view per frame. Returns the input unchanged
+    /// if the filter is unavailable.
+    private func vignetted(_ image: UIImage) -> UIImage {
         guard
-            let img = coverImageView.image,
-            let beginImage = CIImage(image: img),
+            let beginImage = CIImage(image: image),
             let filter = CIFilter(name: "CIVignetteEffect")
-        else { return }
+        else { return image }
 
         filter.setValue(beginImage, forKey: kCIInputImageKey)
         filter.setValue(Constants.vignetteIntensity, forKey: "inputIntensity")
@@ -168,9 +203,9 @@ open class CoverImageTableViewController: UITableViewController {
         guard
             let output = filter.outputImage,
             let rendered = Self.vignetteContext.createCGImage(output, from: beginImage.extent)
-        else { return }
+        else { return image }
 
-        coverImageView.image = UIImage(cgImage: rendered, scale: img.scale, orientation: img.imageOrientation)
+        return UIImage(cgImage: rendered, scale: image.scale, orientation: image.imageOrientation)
     }
 
     // MARK: - Resize
