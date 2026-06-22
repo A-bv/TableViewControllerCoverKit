@@ -1,18 +1,38 @@
 # TableViewControllerCoverKit
 
-A `UITableViewController` whose content scrolls over a cover image. The image sits behind the list with a once-rendered vignette, stretches with a spring effect when the user overscrolls, and the list content starts below the image's visible half.
+A scrolling cover image for **any** `UITableView` — list content scrolls over an image that sits behind it with a once‑rendered vignette, stretches with a spring on overscroll, and a navigation bar that fades in as you scroll past it.
+
+Attaches by **composition**, not subclassing: keep your plain `UITableViewController` and hand the cover a reference to its table view. It observes scrolling itself (KVO), so it never touches your scroll delegate — and removing it leaves a standard table view.
+
+## Requirements
+iOS 17 · Swift 5.9
+
+## Installation
+```swift
+.package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "3.0.0")
+```
 
 ## Usage
-
 ```swift
 import TableViewControllerCoverKit
 
-final class MyListViewController: CoverImageTableViewController {
+final class MyListViewController: UITableViewController {
+    private lazy var cover = CoverImageController(tableView: tableView, host: self)
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        setCoverImage(UIImage(named: "cover"))   // the whole API
+        cover.setCoverImage(UIImage(named: "cover"))
     }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        cover.applyBarAppearance()
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle { cover.preferredStatusBarStyle }
 }
 ```
 
-The class owns the full customization: the navigation bar fades in as the list scrolls over the image, and the status bar reads light while the bar floats over the cover. Tunables: `coverCornerRadius`, `expandedBarHeight`, `barBackgroundColor`. Flip `suspendsCoverStatusBarStyle` while presenting a modal so the status bar reads normally.
+Tunables: `coverCornerRadius`, `expandedBarHeight`, `barBackgroundColor`. Set `suspendsCoverStatusBarStyle` while presenting a modal so the status bar reads normally.
+
+> The status‑bar line is the only thing UIKit forces through the view controller; everything else (cover, vignette, fade, stretch) the controller handles on its own.

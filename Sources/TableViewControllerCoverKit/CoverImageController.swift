@@ -1,18 +1,21 @@
 import UIKit
 
-/// A table view controller whose content scrolls over a cover image: the
-/// image sits behind the list with a vignette, stretches with a spring
-/// effect on overscroll, and the content starts below the image's visible
-/// half.
+/// Adds a scrolling cover image to **any** `UITableView` via composition — no subclassing.
 ///
-/// Hand it an image — that is the whole API:
+/// The image sits behind the list with a vignette, stretches with a spring effect on
+/// overscroll, and the navigation bar fades in as the list scrolls over it. The controller
+/// observes the table view's scrolling itself (KVO on `contentOffset`), so it never touches
+/// your scroll delegate.
 ///
-///     setCoverImage(UIImage(named: "cover"))
-///
-/// The class owns the full customization: the navigation bar fades in as
-/// the list scrolls over the image, and the status bar reads light while
-/// the bar floats over the cover.
-open class CoverImageTableViewController: UITableViewController {
+/// Usage from a plain `UITableViewController`:
+/// ```swift
+/// private lazy var cover = CoverImageController(tableView: tableView, host: self)
+/// // in viewDidLoad:        cover.setCoverImage(UIImage(named: "cover"))
+/// // in viewWillAppear:     cover.applyBarAppearance()
+/// // override the VC's:     var preferredStatusBarStyle { cover.preferredStatusBarStyle }
+/// ```
+/// Remove the package and those few lines and you are left with a standard table view.
+public final class CoverImageController {
 
     /// Corner radius where the list content meets the image.
     public var coverCornerRadius: CGFloat = 22
@@ -23,20 +26,28 @@ open class CoverImageTableViewController: UITableViewController {
     /// The bar's background color once it has fully faded in.
     public var barBackgroundColor: UIColor = .systemBackground
 
-    /// Set while a modal covers this screen so the status bar reads normally.
+    /// Set while a modal covers the screen so the status bar reads normally.
     public var suspendsCoverStatusBarStyle = false {
-        didSet { setNeedsStatusBarAppearanceUpdate() }
+        didSet { host?.setNeedsStatusBarAppearanceUpdate() }
     }
 
-    /// Negative while the bar floats over the image, 0...1 while fading in.
-    private var barFadeProgress: CGFloat = 0 {
-        didSet { setNeedsStatusBarAppearanceUpdate() }
-    }
-
-    open override var preferredStatusBarStyle: UIStatusBarStyle {
+    /// Return this from the host view controller's `preferredStatusBarStyle`.
+    public var preferredStatusBarStyle: UIStatusBarStyle {
         if suspendsCoverStatusBarStyle { return .default }
         return barFadeProgress < 0 ? .lightContent : .default
     }
+
+    private weak var tableView: UITableView?
+    private weak var host: UIViewController?
+    private var coverImageView = UIImageView()
+    private var scrollObservation: NSKeyValueObservation?
+
+    /// Negative while the bar floats over the image, 0...1 while fading in.
+    private var barFadeProgress: CGFloat = 0 {
+        didSet { host?.setNeedsStatusBarAppearanceUpdate() }
+    }
+
+    private static let vignetteContext = CIContext()
 
     private enum Constants {
         static let scrollIndicatorPadding: CGFloat = 20
@@ -46,16 +57,24 @@ open class CoverImageTableViewController: UITableViewController {
         static let largeTitleFontSize: CGFloat = 31
     }
 
-    private var coverImageView = UIImageView()
-    private static let vignetteContext = CIContext()
+    /// Attaches to `tableView`; `host` supplies the navigation + status bar.
+    public init(tableView: UITableView, host: UIViewController) {
+        self.tableView = tableView
+        self.host = host
+        scrollObservation = tableView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
+            self?.scrollChanged()
+        }
+    }
+
+    deinit { scrollObservation?.invalidate() }
 
     // MARK: - Cover image
 
-    /// Installs `image` behind the list — rendered at display size with the
-    /// vignette applied once — and pushes the content below the image's
-    /// visible half. Passing nil keeps the previous image and only refreshes
-    /// the layout.
+    /// Installs `image` behind the list — rendered at display size with the vignette
+    /// applied once — and pushes the content below the image's visible half. Passing nil
+    /// keeps the previous image and only refreshes the layout.
     public func setCoverImage(_ image: UIImage?) {
+        guard let tableView else { return }
         if let image {
             coverImageView = UIImageView(image: resizedToDisplay(image))
         }
@@ -71,6 +90,11 @@ open class CoverImageTableViewController: UITableViewController {
         configureContentInsets()
     }
 
+    /// Re-applies the navigation bar appearance — call from the host's `viewWillAppear`.
+    public func applyBarAppearance() {
+        applyBarTransparency()
+    }
+
     private var coverDisplaySize: CGSize {
         CGSize(
             width: UIScreen.main.bounds.width,
@@ -78,6 +102,7 @@ open class CoverImageTableViewController: UITableViewController {
     }
 
     private func configureContentInsets() {
+        guard let tableView else { return }
         let halfScreen = UIScreen.main.bounds.height / 2
         let topInset = halfScreen - (expandedBarHeight + statusBarHeight)
         let indicatorInset = (halfScreen - expandedBarHeight)
@@ -97,15 +122,11 @@ open class CoverImageTableViewController: UITableViewController {
 
     // MARK: - Scroll: bar fade + spring stretch
 
-    open override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        applyBarTransparency()
-    }
+    private func scrollChanged() {
+        guard let tableView, let host else { return }
+        let offset = tableView.contentOffset.y
 
-    open override func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let offset = scrollView.contentOffset.y
-
-        let barHeight = navigationController?.navigationBar.frame.height ?? 0
+        let barHeight = host.navigationController?.navigationBar.frame.height ?? 0
         let fadeStart = barHeight + 2 * statusBarHeight
         barFadeProgress = min(1, (offset + fadeStart) / Constants.barFadeDistance)
         applyBarTransparency()
@@ -117,6 +138,7 @@ open class CoverImageTableViewController: UITableViewController {
     }
 
     private func applyBarTransparency() {
+        guard let host else { return }
         let overImage = barFadeProgress < 0
         let textColor: UIColor = overImage ? .white : .label.withAlphaComponent(barFadeProgress)
         let backgroundColor: UIColor = overImage ? .clear : barBackgroundColor.withAlphaComponent(barFadeProgress)
@@ -130,16 +152,16 @@ open class CoverImageTableViewController: UITableViewController {
             .foregroundColor: UIColor.white,
             .font: UIFont.systemFont(ofSize: Constants.largeTitleFontSize, weight: .bold),
         ]
-        navigationItem.standardAppearance = appearance
-        navigationItem.scrollEdgeAppearance = appearance
-        navigationItem.compactAppearance = appearance
-        navigationController?.navigationBar.tintColor = textColor
+        host.navigationItem.standardAppearance = appearance
+        host.navigationItem.scrollEdgeAppearance = appearance
+        host.navigationItem.compactAppearance = appearance
+        host.navigationController?.navigationBar.tintColor = textColor
     }
 
     // MARK: - Vignette
 
-    /// Rendered once into a bitmap; a CIImage-backed image would re-run the
-    /// filter on every draw while the stretch resizes the view per frame.
+    /// Rendered once into a bitmap; a CIImage-backed image would re-run the filter on
+    /// every draw while the stretch resizes the view per frame.
     private func applyVignette() {
         guard
             let img = coverImageView.image,
