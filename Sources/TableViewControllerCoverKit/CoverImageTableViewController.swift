@@ -24,7 +24,9 @@ open class CoverImageTableViewController: UITableViewController {
     public var expandedBarHeight: CGFloat = 96
 
     /// The bar's background color once it has fully faded in.
-    public var barBackgroundColor: UIColor = .systemBackground
+    public var barBackgroundColor: UIColor = .systemBackground {
+        didSet { lastAppliedBarKey = nil }   // force the appearance to rebuild with the new color
+    }
 
     /// Set while a modal covers this screen so the status bar reads normally.
     public var suspendsCoverStatusBarStyle = false {
@@ -63,6 +65,10 @@ open class CoverImageTableViewController: UITableViewController {
 
     /// Whether the content has been rested below the cover yet (done once, on first install).
     private var hasPositionedContent = false
+
+    /// The last fade state pushed to the navigation bar, so the appearance is only rebuilt
+    /// while it actually changes (the brief fade) — not on every scroll callback.
+    private var lastAppliedBarKey: CGFloat?
 
     /// The navigation bar's collapsed height, used to anchor the fade. Large titles make
     /// `navigationBar.frame.height` swing (≈96 expanded → its standard height once collapsed),
@@ -127,21 +133,25 @@ open class CoverImageTableViewController: UITableViewController {
             + coverCornerRadius + Constants.scrollIndicatorPadding
 
         tableView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: 0, right: 0)
-        tableView.scrollIndicatorInsets = UIEdgeInsets(top: indicatorInset, left: 0, bottom: 0, right: 0)
+        tableView.verticalScrollIndicatorInsets = UIEdgeInsets(top: indicatorInset, left: 0, bottom: 0, right: 0)
     }
 
     private var statusBarHeight: CGFloat {
-        let window = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }
-        return window?.windowScene?.statusBarManager?.statusBarFrame.height ?? 0
+        // This controller's own scene — not a global key-window search — so the height stays
+        // correct in multi-window setups (iPad Split View, Stage Manager). Falls back to the
+        // foreground-active scene before the view is in a window.
+        let scene = view.window?.windowScene
+            ?? UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }
+        return scene?.statusBarManager?.statusBarFrame.height ?? 0
     }
 
     // MARK: - Scroll: bar fade + spring stretch
 
     open override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        lastAppliedBarKey = nil          // re-apply on return; another screen may have reset the bar
         applyBarTransparency()
     }
 
@@ -166,6 +176,12 @@ open class CoverImageTableViewController: UITableViewController {
     }
 
     private func applyBarTransparency() {
+        // The appearance is constant while the bar floats over the image (progress < 0) and
+        // while it is fully opaque (progress == 1); only rebuild it through the fade between.
+        let key: CGFloat = barFadeProgress < 0 ? -1 : barFadeProgress
+        if key == lastAppliedBarKey { return }
+        lastAppliedBarKey = key
+
         let overImage = barFadeProgress < 0
         let textColor: UIColor = overImage ? .white : .label.withAlphaComponent(barFadeProgress)
         let backgroundColor: UIColor = overImage ? .clear : barBackgroundColor.withAlphaComponent(barFadeProgress)

@@ -65,6 +65,24 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertGreaterThan(cover?.frame.height ?? 0, restingHeight)
     }
 
+    func testBarAppearance_fadesInAsTheListScrollsOverTheImage() {
+        let sut = makeSUT()
+        sut.setCoverImage(makeImage())
+
+        // Over the image: the bar is transparent (a clear background reads back as nil).
+        sut.tableView.contentOffset = CGPoint(x: 0, y: -400)
+        sut.scrollViewDidScroll(sut.tableView)
+        let overImageAlpha = sut.navigationItem.standardAppearance?.backgroundColor?.cgColor.alpha ?? 0
+
+        // Scrolled well past the image: the bar is opaque.
+        sut.tableView.contentOffset = CGPoint(x: 0, y: 400)
+        sut.scrollViewDidScroll(sut.tableView)
+        let scrolledAlpha = sut.navigationItem.standardAppearance?.backgroundColor?.cgColor.alpha ?? 0
+
+        XCTAssertEqual(overImageAlpha, 0, accuracy: 0.01)
+        XCTAssertEqual(scrolledAlpha, 1, accuracy: 0.01)
+    }
+
     func testResize_reRendersCoverAndInsetsForTheNewBounds() {
         let sut = makeSUT(width: 390, height: 844)
         sut.setCoverImage(makeImage())
