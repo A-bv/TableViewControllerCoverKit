@@ -1,11 +1,22 @@
+#if DEBUG
 import SwiftUI
 import UIKit
 
-// Scrollable living preview: a list with a sample cover so you can verify the fade +
-// spring-stretch directly in Xcode's canvas, no host app needed. Scroll up to see the
-// bar fade in; pull down to see the cover stretch.
-#Preview("Cover") {
-    UINavigationController(rootViewController: CoverDemoListController())
+// Scrollable living preview: a list with a sample cover. Scroll up to see the bar fade
+// in; pull down to see the cover stretch. Uses `PreviewProvider` (not the `#Preview`
+// macro) so the package stays iOS 15+.
+struct Cover_Previews: PreviewProvider {
+    static var previews: some View {
+        CoverPreview().ignoresSafeArea()
+    }
+
+    private struct CoverPreview: UIViewControllerRepresentable {
+        func makeUIViewController(context: Context) -> UIViewController {
+            UINavigationController(rootViewController: CoverDemoListController())
+        }
+
+        func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+    }
 }
 
 private final class CoverDemoListController: CoverImageTableViewController {
@@ -37,3 +48,4 @@ private final class CoverDemoListController: CoverImageTableViewController {
         }
     }
 }
+#endif
