@@ -3,16 +3,15 @@ import UIKit
 /// Adds a scrolling cover image to **any** `UITableView` via composition — no subclassing.
 ///
 /// The image sits behind the list with a vignette, stretches with a spring effect on
-/// overscroll, and the navigation bar fades in as the list scrolls over it. The controller
-/// observes the table view's scrolling itself (KVO on `contentOffset`), so it never touches
-/// your scroll delegate.
+/// overscroll, and the navigation bar fades in as the list scrolls over it.
 ///
-/// Usage from a plain `UITableViewController`:
+/// Usage from a plain `UITableViewController` — forward these callbacks:
 /// ```swift
 /// private lazy var cover = CoverImageController(tableView: tableView, host: self)
-/// // in viewDidLoad:        cover.setCoverImage(UIImage(named: "cover"))
-/// // in viewWillAppear:     cover.applyBarAppearance()
-/// // override the VC's:     var preferredStatusBarStyle { cover.preferredStatusBarStyle }
+/// // viewDidLoad:              cover.setCoverImage(UIImage(named: "cover"))
+/// // viewWillAppear:           cover.applyBarAppearance()
+/// // scrollViewDidScroll:      cover.scrollViewDidScroll()
+/// // preferredStatusBarStyle:  cover.preferredStatusBarStyle
 /// ```
 /// Remove the package and those few lines and you are left with a standard table view.
 public final class CoverImageController {
@@ -40,7 +39,6 @@ public final class CoverImageController {
     private weak var tableView: UITableView?
     private weak var host: UIViewController?
     private var coverImageView = UIImageView()
-    private var scrollObservation: NSKeyValueObservation?
 
     /// Negative while the bar floats over the image, 0...1 while fading in.
     private var barFadeProgress: CGFloat = 0 {
@@ -61,12 +59,7 @@ public final class CoverImageController {
     public init(tableView: UITableView, host: UIViewController) {
         self.tableView = tableView
         self.host = host
-        scrollObservation = tableView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
-            self?.scrollChanged()
-        }
     }
-
-    deinit { scrollObservation?.invalidate() }
 
     // MARK: - Cover image
 
@@ -122,7 +115,8 @@ public final class CoverImageController {
 
     // MARK: - Scroll: bar fade + spring stretch
 
-    private func scrollChanged() {
+    /// Forward the host's `scrollViewDidScroll(_:)` so the bar fades and the cover stretches.
+    public func scrollViewDidScroll() {
         guard let tableView, let host else { return }
         let offset = tableView.contentOffset.y
 

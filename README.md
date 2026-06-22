@@ -2,7 +2,7 @@
 
 A scrolling cover image for **any** `UITableView` — list content scrolls over an image that sits behind it with a once‑rendered vignette, stretches with a spring on overscroll, and a navigation bar that fades in as you scroll past it.
 
-Attaches by **composition**, not subclassing: keep your plain `UITableViewController` and hand the cover a reference to its table view. It observes scrolling itself (KVO), so it never touches your scroll delegate — and removing it leaves a standard table view.
+Attaches by **composition**, not subclassing: keep your plain `UITableViewController`, hand the cover its table view, and forward a few callbacks. Remove it and those lines, and you're left with a standard table view.
 
 ## Requirements
 iOS 17 · Swift 5.9
@@ -27,6 +27,10 @@ final class MyListViewController: UITableViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         cover.applyBarAppearance()
+    }
+
+    override func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        cover.scrollViewDidScroll()
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle { cover.preferredStatusBarStyle }

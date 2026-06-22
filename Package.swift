@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "TableViewControllerCoverKit",
-    platforms: [.iOS(.v15)],
+    platforms: [.iOS(.v17)],
     products: [
         .library(name: "TableViewControllerCoverKit", targets: ["TableViewControllerCoverKit"]),
     ],
