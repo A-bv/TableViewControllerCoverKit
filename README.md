@@ -8,6 +8,7 @@ Subclass it and hand it an image; that's the whole API. Remove the package and s
 iOS 15
 
 ## Installation
+Swift Package Manager: https://github.com/A-bv/TableViewControllerCoverKit
 ```swift
 .package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "5.0.0")
 ```
