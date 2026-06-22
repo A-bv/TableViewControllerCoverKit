@@ -4,6 +4,9 @@ A `UITableViewController` whose content scrolls over a cover image — the image
 
 Subclass it and hand it an image; that's the whole API. Remove the package and swap the superclass back to `UITableViewController` for a standard list.
 
+## Example application
+https://github.com/user-attachments/assets/2bfce3b0-6258-4cf7-8246-9bc4729b420c
+
 ## Requirements
 iOS 15
 
