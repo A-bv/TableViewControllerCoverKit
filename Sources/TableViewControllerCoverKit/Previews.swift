@@ -8,28 +8,15 @@ import UIKit
     UINavigationController(rootViewController: CoverDemoListController())
 }
 
-private final class CoverDemoListController: UITableViewController {
-    private lazy var cover = CoverImageController(tableView: tableView, host: self)
-
+private final class CoverDemoListController: CoverImageTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Cover"
         navigationController?.navigationBar.prefersLargeTitles = true
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
-        cover.barBackgroundColor = .systemBackground
-        cover.setCoverImage(Self.sampleCover())
+        barBackgroundColor = .systemBackground
+        setCoverImage(Self.sampleCover())
     }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        cover.applyBarAppearance()
-    }
-
-    override func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        cover.scrollViewDidScroll()
-    }
-
-    override var preferredStatusBarStyle: UIStatusBarStyle { cover.preferredStatusBarStyle }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { 30 }
 
