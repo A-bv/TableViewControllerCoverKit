@@ -52,6 +52,12 @@ open class CoverImageTableViewController: UITableViewController {
     private var coverImageView = UIImageView()
     private static let vignetteContext = CIContext()
 
+    /// The navigation bar's collapsed height, used to anchor the fade. Large titles make
+    /// `navigationBar.frame.height` swing (≈96 expanded → its standard height once collapsed),
+    /// so reading it live drifts the fade trigger and the bar darkens late and abruptly. The
+    /// smallest height seen is the collapsed one, and it settles before the fade range begins.
+    private var collapsedBarHeight: CGFloat = .greatestFiniteMagnitude
+
     // MARK: - Cover image
 
     /// Installs `image` behind the list — rendered at display size with the vignette
@@ -108,14 +114,20 @@ open class CoverImageTableViewController: UITableViewController {
         let offset = scrollView.contentOffset.y
 
         let barHeight = navigationController?.navigationBar.frame.height ?? 0
-        let fadeStart = barHeight + 2 * statusBarHeight
+        if barHeight > 0 { collapsedBarHeight = min(collapsedBarHeight, barHeight) }
+        let stableBarHeight = collapsedBarHeight == .greatestFiniteMagnitude ? barHeight : collapsedBarHeight
+        let fadeStart = stableBarHeight + 2 * statusBarHeight
         barFadeProgress = min(1, (offset + fadeStart) / Constants.barFadeDistance)
         applyBarTransparency()
 
-        let bounceThreshold = -UIScreen.main.bounds.height / 2
-        if offset < bounceThreshold {
-            coverImageView.frame.size.height = -offset + coverCornerRadius
-        }
+        // Stretch the cover only while the list is pulled past its resting top, by exactly
+        // the overscroll amount. Anchoring to the live rest offset (not a fixed half-screen)
+        // keeps the cover at its display height at rest — large titles enlarge the top inset,
+        // which previously left the cover stretched at rest and shrinking on the first scroll —
+        // and starts the spring immediately on pull-down instead of after a dead zone.
+        let restOffset = -scrollView.adjustedContentInset.top
+        let overscroll = max(0, restOffset - offset)
+        coverImageView.frame.size.height = coverDisplaySize.height + overscroll
     }
 
     private func applyBarTransparency() {
