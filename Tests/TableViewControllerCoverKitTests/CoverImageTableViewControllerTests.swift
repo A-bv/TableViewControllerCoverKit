@@ -99,4 +99,26 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertNotEqual(portraitCoverHeight, cover()?.frame.height)
         XCTAssertEqual(cover()?.frame.height ?? 0, 390 / 2 + sut.coverCornerRadius, accuracy: 0.5)
     }
+
+    func testFadeInsideNavigationController_isLightOverImageThenOpaquePastIt() {
+        let sut = CoverImageTableViewController()
+        let nav = UINavigationController(rootViewController: sut)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        window.rootViewController = nav
+        window.makeKeyAndVisible()
+        sut.view.layoutIfNeeded()
+        sut.setCoverImage(makeImage())
+        sut.view.layoutIfNeeded()
+
+        // Over the cover: light status bar, transparent bar.
+        sut.tableView.contentOffset = CGPoint(x: 0, y: -400)
+        sut.scrollViewDidScroll(sut.tableView)
+        XCTAssertEqual(sut.preferredStatusBarStyle, .lightContent)
+
+        // Scrolled up past the image: default status bar, opaque bar.
+        sut.tableView.contentOffset = CGPoint(x: 0, y: 600)
+        sut.scrollViewDidScroll(sut.tableView)
+        XCTAssertEqual(sut.preferredStatusBarStyle, .default)
+        XCTAssertEqual(sut.navigationItem.standardAppearance?.backgroundColor?.cgColor.alpha ?? 0, 1, accuracy: 0.01)
+    }
 }

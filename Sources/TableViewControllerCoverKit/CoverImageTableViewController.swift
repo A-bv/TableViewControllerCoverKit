@@ -20,7 +20,10 @@ open class CoverImageTableViewController: UITableViewController {
     /// Corner radius where the list content meets the image.
     public var coverCornerRadius: CGFloat = 22
 
-    /// Estimated expanded-bar height used to position the content's top edge.
+    /// The bar height assumed when positioning the content's top edge below the cover. A fixed
+    /// estimate on purpose: the live bar height swings while a large title collapses, so a stable
+    /// value is needed or the content would shift during the scroll. Adjust it if the gap between
+    /// the cover and the first row doesn't suit your bar.
     public var expandedBarHeight: CGFloat = 96
 
     /// The bar's background color once it has fully faded in.
@@ -107,6 +110,7 @@ open class CoverImageTableViewController: UITableViewController {
         guard sourceImage != nil else { return }     // nothing to install until given an image
         let size = coverDisplaySize
         guard size.width > 0, size.height > 0, size != installedCoverSize else { return }
+
         installedCoverSize = size
 
         if let sourceImage {
@@ -120,12 +124,23 @@ open class CoverImageTableViewController: UITableViewController {
         tableView.backgroundView = coverBackgroundView
         configureContentInsets()
 
-        // The inset is first applied here, after the scroll view has already initialised its
-        // offset, so rest the content below the cover once. (Setting the inset in viewDidLoad —
-        // before first layout — used to let the system do this, but it needs the real bounds.)
+        // Rest the content below the cover on first layout. (The inset is applied after the scroll
+        // view initialised its offset, so it has to be positioned explicitly; resizes are handled
+        // in viewWillTransition, which can capture the position before the bounds change.)
         if !hasPositionedContent {
             hasPositionedContent = true
             tableView.contentOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top)
+        }
+    }
+
+    open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        // Preserve how far the list is scrolled across a rotation/resize: capture it now, while
+        // the current layout is valid, and restore it once the new layout has settled.
+        let scrolledPastRest = tableView.contentOffset.y + tableView.adjustedContentInset.top
+        coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+            guard let self else { return }
+            self.tableView.contentOffset = CGPoint(x: 0, y: -self.tableView.adjustedContentInset.top + scrolledPastRest)
         }
     }
 
