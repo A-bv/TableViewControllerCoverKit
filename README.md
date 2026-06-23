@@ -96,7 +96,7 @@ With large titles the bar fades in step with the title collapsing into its inlin
 | Property | Default | Effect |
 | --- | --- | --- |
 | `coverCornerRadius` | `22` | Corner radius where the list meets the image. |
-| `expandedBarHeight` | `96` | Estimated expanded-bar height used to place the content's top edge. |
+| `expandedBarHeight` | `nil` (derived) | Optional override for the bar area above the content; derived from the safe area when `nil`. |
 | `barBackgroundColor` | `.systemBackground` | The bar's background once it has fully faded in. |
 | `suspendsCoverStatusBarStyle` | `false` | Set while presenting a modal so the status bar reads normally. |
 

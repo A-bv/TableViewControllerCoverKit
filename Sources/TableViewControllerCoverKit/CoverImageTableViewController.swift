@@ -20,11 +20,11 @@ open class CoverImageTableViewController: UITableViewController {
     /// Corner radius where the list content meets the image.
     public var coverCornerRadius: CGFloat = 22
 
-    /// The bar height assumed when positioning the content's top edge below the cover. A fixed
-    /// estimate on purpose: the live bar height swings while a large title collapses, so a stable
-    /// value is needed or the content would shift during the scroll. Adjust it if the gap between
-    /// the cover and the first row doesn't suit your bar.
-    public var expandedBarHeight: CGFloat = 96
+    /// Optional manual override for the bar area used to position the content's top edge below
+    /// the cover. When `nil` (the default) it is derived from the view's own top safe-area inset
+    /// (the real status-bar + navigation-bar height at its expanded size), so it adapts to the
+    /// device and title style. Set it only to hand-tune the gap between the cover and first row.
+    public var expandedBarHeight: CGFloat?
 
     /// The bar's background color once it has fully faded in.
     public var barBackgroundColor: UIColor = .systemBackground {
@@ -52,9 +52,6 @@ open class CoverImageTableViewController: UITableViewController {
         static let vignetteRadius = 0.2
         static let barFadeDistance: CGFloat = 50
         static let largeTitleFontSize: CGFloat = 31
-        /// Roughly the height the large-title row adds to the bar; the scroll distance over
-        /// which a large title collapses into the inline title.
-        static let largeTitleCollapseDistance: CGFloat = 52
     }
 
     private var coverImageView = UIImageView()
@@ -85,6 +82,18 @@ open class CoverImageTableViewController: UITableViewController {
     /// The largest navigation-bar height seen — i.e. the expanded large-title height. Used to
     /// measure how far a large title has collapsed.
     private var maxBarHeightSeen: CGFloat = 0
+
+    /// The largest top safe-area inset seen — the expanded bar area used to anchor the content
+    /// below the cover when `expandedBarHeight` isn't overridden.
+    private var maxSafeAreaTopSeen: CGFloat = 0
+
+    /// The scroll distance over which a large title collapses into the inline title. There is no
+    /// API for it before the collapse happens (the bar reports its expanded height throughout),
+    /// so it bootstraps from the large-title font's line height and refines to the bar's measured
+    /// expanded − collapsed height once a collapse settles.
+    private lazy var largeTitleCollapseDistance =
+        UIFont.systemFont(ofSize: Constants.largeTitleFontSize, weight: .bold).lineHeight
+    private var lastBarHeight: CGFloat = 0
 
     // MARK: - Cover image
 
@@ -137,11 +146,16 @@ open class CoverImageTableViewController: UITableViewController {
         super.viewWillTransition(to: size, with: coordinator)
         // Preserve how far the list is scrolled across a rotation/resize: capture it now, while
         // the current layout is valid, and restore it once the new layout has settled.
-        let scrolledPastRest = tableView.contentOffset.y + tableView.adjustedContentInset.top
-        coordinator.animate(alongsideTransition: nil) { [weak self] _ in
-            guard let self else { return }
-            self.tableView.contentOffset = CGPoint(x: 0, y: -self.tableView.adjustedContentInset.top + scrolledPastRest)
-        }
+        let pastRest = scrolledPastRest
+        coordinator.animate(alongsideTransition: nil) { [weak self] _ in self?.restoreScroll(pastRest: pastRest) }
+    }
+
+    /// How far the list is scrolled past its resting top. (Capture before a resize.)
+    var scrolledPastRest: CGFloat { tableView.contentOffset.y + tableView.adjustedContentInset.top }
+
+    /// Re-rest the content keeping `pastRest` distance scrolled. (Restore after a resize.)
+    func restoreScroll(pastRest: CGFloat) {
+        tableView.contentOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top + pastRest)
     }
 
     private var coverDisplaySize: CGSize {
@@ -149,9 +163,14 @@ open class CoverImageTableViewController: UITableViewController {
     }
 
     private func configureContentInsets() {
+        maxSafeAreaTopSeen = max(maxSafeAreaTopSeen, view.safeAreaInsets.top)
+
+        // The bar area to clear above the content: the real expanded top safe area (status +
+        // navigation bar), or the manual override if one is set.
+        let barArea = expandedBarHeight.map { $0 + statusBarHeight } ?? maxSafeAreaTopSeen
         let halfHeight = view.bounds.height / 2
-        let topInset = halfHeight - (expandedBarHeight + statusBarHeight)
-        let indicatorInset = (halfHeight - expandedBarHeight)
+        let topInset = halfHeight - barArea
+        let indicatorInset = (halfHeight - (barArea - statusBarHeight))
             + coverCornerRadius + Constants.scrollIndicatorPadding
 
         tableView.contentInset = UIEdgeInsets(top: topInset, left: 0, bottom: 0, right: 0)
@@ -184,6 +203,12 @@ open class CoverImageTableViewController: UITableViewController {
         if barHeight > 0 {
             collapsedBarHeight = min(collapsedBarHeight, barHeight)
             maxBarHeightSeen = max(maxBarHeightSeen, barHeight)
+            // Once the bar settles at a collapsed height (stable, below its expanded max), that's
+            // the true collapse distance — refine to it from the font-line-height bootstrap.
+            if barHeight == lastBarHeight, barHeight < maxBarHeightSeen {
+                largeTitleCollapseDistance = maxBarHeightSeen - barHeight
+            }
+            lastBarHeight = barHeight
         }
 
         if navigationController?.navigationBar.prefersLargeTitles == true {
@@ -191,7 +216,7 @@ open class CoverImageTableViewController: UITableViewController {
             // (the inset shrinks in step with it), so offset can't drive the fade. Track the
             // collapse from the bar height instead and fade in lockstep with it, the way the
             // system fades its own material — the background arrives as the title docks.
-            let collapse = min(1, max(0, (maxBarHeightSeen - barHeight) / Constants.largeTitleCollapseDistance))
+            let collapse = min(1, max(0, (maxBarHeightSeen - barHeight) / largeTitleCollapseDistance))
             barFadeProgress = collapse * 2 - 1
         } else {
             // Standard title: fade as the list scrolls up to meet the bar.
