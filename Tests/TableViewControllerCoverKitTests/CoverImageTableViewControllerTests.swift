@@ -100,23 +100,6 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertEqual(cover()?.frame.height ?? 0, 390 / 2 + sut.coverCornerRadius, accuracy: 0.5)
     }
 
-    func testRotation_preservesTheScrollPosition() {
-        let sut = makeSUT(width: 390, height: 844)
-        sut.setCoverImage(makeImage())
-
-        // Scroll 200pt past the resting top and capture (as viewWillTransition does before a resize).
-        sut.tableView.contentOffset = CGPoint(x: 0, y: -sut.tableView.adjustedContentInset.top + 200)
-        let captured = sut.scrolledPastRest
-        XCTAssertEqual(captured, 200, accuracy: 1)
-
-        // Resize (rotation), then restore (as the transition's completion does).
-        sut.view.frame = CGRect(x: 0, y: 0, width: 844, height: 390)
-        sut.view.layoutIfNeeded()
-        sut.restoreScroll(pastRest: captured)
-
-        XCTAssertEqual(sut.scrolledPastRest, 200, accuracy: 1)
-    }
-
     func testFadeInsideNavigationController_isLightOverImageThenOpaquePastIt() {
         let sut = CoverImageTableViewController()
         let nav = UINavigationController(rootViewController: sut)

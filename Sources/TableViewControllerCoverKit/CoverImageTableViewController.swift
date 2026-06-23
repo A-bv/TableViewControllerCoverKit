@@ -52,6 +52,10 @@ open class CoverImageTableViewController: UITableViewController {
         static let vignetteRadius = 0.2
         static let barFadeDistance: CGFloat = 50
         static let largeTitleFontSize: CGFloat = 31
+        /// Scroll distance over which a large title collapses into the inline title — the height
+        /// its row adds to the bar. No public API reports it (the bar reports its expanded height
+        /// throughout, even from `sizeThatFits`), so it is a measured constant.
+        static let largeTitleCollapseDistance: CGFloat = 52
     }
 
     private var coverImageView = UIImageView()
@@ -87,20 +91,12 @@ open class CoverImageTableViewController: UITableViewController {
     /// below the cover when `expandedBarHeight` isn't overridden.
     private var maxSafeAreaTopSeen: CGFloat = 0
 
-    /// The scroll distance over which a large title collapses into the inline title. There is no
-    /// API for it before the collapse happens (the bar reports its expanded height throughout),
-    /// so it bootstraps from the large-title font's line height and refines to the bar's measured
-    /// expanded − collapsed height once a collapse settles.
-    private lazy var largeTitleCollapseDistance =
-        UIFont.systemFont(ofSize: Constants.largeTitleFontSize, weight: .bold).lineHeight
-    private var lastBarHeight: CGFloat = 0
-
     // MARK: - Cover image
 
     /// Installs `image` behind the list — rendered at display size with the vignette applied
     /// once — and pushes the content below the image's visible half. Passing nil keeps the
     /// previous image and only refreshes the layout. The cover is sized off the actual view
-    /// bounds and re-renders itself when those change, so it survives rotation and resizing.
+    /// bounds and re-renders itself when those change.
     public func setCoverImage(_ image: UIImage?) {
         if let image { sourceImage = image }
         installedCoverSize = .zero          // force a re-render for the new image / refresh
@@ -133,29 +129,12 @@ open class CoverImageTableViewController: UITableViewController {
         tableView.backgroundView = coverBackgroundView
         configureContentInsets()
 
-        // Rest the content below the cover on first layout. (The inset is applied after the scroll
-        // view initialised its offset, so it has to be positioned explicitly; resizes are handled
-        // in viewWillTransition, which can capture the position before the bounds change.)
+        // Rest the content below the cover on first layout. The inset is applied after the scroll
+        // view initialised its offset, so it has to be positioned explicitly the first time.
         if !hasPositionedContent {
             hasPositionedContent = true
             tableView.contentOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top)
         }
-    }
-
-    open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-        super.viewWillTransition(to: size, with: coordinator)
-        // Preserve how far the list is scrolled across a rotation/resize: capture it now, while
-        // the current layout is valid, and restore it once the new layout has settled.
-        let pastRest = scrolledPastRest
-        coordinator.animate(alongsideTransition: nil) { [weak self] _ in self?.restoreScroll(pastRest: pastRest) }
-    }
-
-    /// How far the list is scrolled past its resting top. (Capture before a resize.)
-    var scrolledPastRest: CGFloat { tableView.contentOffset.y + tableView.adjustedContentInset.top }
-
-    /// Re-rest the content keeping `pastRest` distance scrolled. (Restore after a resize.)
-    func restoreScroll(pastRest: CGFloat) {
-        tableView.contentOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top + pastRest)
     }
 
     private var coverDisplaySize: CGSize {
@@ -203,12 +182,6 @@ open class CoverImageTableViewController: UITableViewController {
         if barHeight > 0 {
             collapsedBarHeight = min(collapsedBarHeight, barHeight)
             maxBarHeightSeen = max(maxBarHeightSeen, barHeight)
-            // Once the bar settles at a collapsed height (stable, below its expanded max), that's
-            // the true collapse distance — refine to it from the font-line-height bootstrap.
-            if barHeight == lastBarHeight, barHeight < maxBarHeightSeen {
-                largeTitleCollapseDistance = maxBarHeightSeen - barHeight
-            }
-            lastBarHeight = barHeight
         }
 
         if navigationController?.navigationBar.prefersLargeTitles == true {
@@ -216,7 +189,7 @@ open class CoverImageTableViewController: UITableViewController {
             // (the inset shrinks in step with it), so offset can't drive the fade. Track the
             // collapse from the bar height instead and fade in lockstep with it, the way the
             // system fades its own material — the background arrives as the title docks.
-            let collapse = min(1, max(0, (maxBarHeightSeen - barHeight) / largeTitleCollapseDistance))
+            let collapse = min(1, max(0, (maxBarHeightSeen - barHeight) / Constants.largeTitleCollapseDistance))
             barFadeProgress = collapse * 2 - 1
         } else {
             // Standard title: fade as the list scrolls up to meet the bar.
@@ -254,7 +227,9 @@ open class CoverImageTableViewController: UITableViewController {
         appearance.titleTextAttributes = [.foregroundColor: textColor]
         appearance.largeTitleTextAttributes = [
             .foregroundColor: UIColor.white,
-            .font: UIFont.systemFont(ofSize: Constants.largeTitleFontSize, weight: .bold),
+            // Scaled with Dynamic Type so the large title grows with the user's text size.
+            .font: UIFontMetrics(forTextStyle: .largeTitle)
+                .scaledFont(for: .systemFont(ofSize: Constants.largeTitleFontSize, weight: .bold)),
         ]
         navigationItem.standardAppearance = appearance
         navigationItem.scrollEdgeAppearance = appearance

@@ -100,6 +100,11 @@ With large titles the bar fades in step with the title collapsing into its inlin
 | `barBackgroundColor` | `.systemBackground` | The bar's background once it has fully faded in. |
 | `suspendsCoverStatusBarStyle` | `false` | Set while presenting a modal so the status bar reads normally. |
 
+## Notes
+
+- **Portrait-oriented.** The cover is half the view height, designed for a portrait phone screen; it isn't tuned for landscape or iPad multitasking.
+- **Overscroll is the cover's.** The pull-down spring drives the cover stretch, so adding a `UIRefreshControl` will conflict with it.
+
 ## Preview
 
 A scrollable `#Preview` ships with the package — open `Previews.swift` in Xcode to see the fade and stretch without building an app.
