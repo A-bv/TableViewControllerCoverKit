@@ -100,6 +100,27 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertEqual(cover()?.frame.height ?? 0, 390 / 2 + sut.coverCornerRadius, accuracy: 0.5)
     }
 
+    func testExpandedBarHeight_overrideChangesTheContentInset() {
+        let derived = makeSUT()
+        derived.setCoverImage(makeImage())
+        let derivedInset = derived.tableView.contentInset.top
+
+        let overridden = makeSUT()
+        overridden.expandedBarHeight = 200          // manual override instead of the derived value
+        overridden.setCoverImage(makeImage())
+
+        XCTAssertNotEqual(derivedInset, overridden.tableView.contentInset.top)
+    }
+
+    func testSetCoverImageNil_keepsThePreviousCover() {
+        let sut = makeSUT()
+        sut.setCoverImage(makeImage())
+        XCTAssertNotNil((sut.tableView.backgroundView?.subviews.first as? UIImageView)?.image)
+
+        sut.setCoverImage(nil)                      // keep the previous image, just refresh layout
+        XCTAssertNotNil((sut.tableView.backgroundView?.subviews.first as? UIImageView)?.image)
+    }
+
     func testFadeProgress_largeTitle_transparentExpanded_opaqueCollapsed() {
         // Expanded (bar at its max height): floats transparently over the image.
         XCTAssertLessThan(
