@@ -49,6 +49,9 @@ open class CoverImageTableViewController: UITableViewController {
         static let vignetteRadius = 0.2
         static let barFadeDistance: CGFloat = 50
         static let largeTitleFontSize: CGFloat = 31
+        /// Roughly the height the large-title row adds to the bar; the scroll distance over
+        /// which a large title collapses into the inline title.
+        static let largeTitleCollapseDistance: CGFloat = 52
     }
 
     private var coverImageView = UIImageView()
@@ -75,6 +78,10 @@ open class CoverImageTableViewController: UITableViewController {
     /// so reading it live drifts the fade trigger and the bar darkens late and abruptly. The
     /// smallest height seen is the collapsed one, and it settles before the fade range begins.
     private var collapsedBarHeight: CGFloat = .greatestFiniteMagnitude
+
+    /// The largest navigation-bar height seen — i.e. the expanded large-title height. Used to
+    /// measure how far a large title has collapsed.
+    private var maxBarHeightSeen: CGFloat = 0
 
     // MARK: - Cover image
 
@@ -159,10 +166,24 @@ open class CoverImageTableViewController: UITableViewController {
         let offset = scrollView.contentOffset.y
 
         let barHeight = navigationController?.navigationBar.frame.height ?? 0
-        if barHeight > 0 { collapsedBarHeight = min(collapsedBarHeight, barHeight) }
-        let stableBarHeight = collapsedBarHeight == .greatestFiniteMagnitude ? barHeight : collapsedBarHeight
-        let fadeStart = stableBarHeight + 2 * statusBarHeight
-        barFadeProgress = min(1, (offset + fadeStart) / Constants.barFadeDistance)
+        if barHeight > 0 {
+            collapsedBarHeight = min(collapsedBarHeight, barHeight)
+            maxBarHeightSeen = max(maxBarHeightSeen, barHeight)
+        }
+
+        if navigationController?.navigationBar.prefersLargeTitles == true {
+            // Large titles: the content offset stays pinned to the top while the bar collapses
+            // (the inset shrinks in step with it), so offset can't drive the fade. Track the
+            // collapse from the bar height instead and fade in lockstep with it, the way the
+            // system fades its own material — the background arrives as the title docks.
+            let collapse = min(1, max(0, (maxBarHeightSeen - barHeight) / Constants.largeTitleCollapseDistance))
+            barFadeProgress = collapse * 2 - 1
+        } else {
+            // Standard title: fade as the list scrolls up to meet the bar.
+            let stableBarHeight = collapsedBarHeight == .greatestFiniteMagnitude ? barHeight : collapsedBarHeight
+            let fadeStart = stableBarHeight + 2 * statusBarHeight
+            barFadeProgress = min(1, (offset + fadeStart) / Constants.barFadeDistance)
+        }
         applyBarTransparency()
 
         // Stretch the cover only while the list is pulled past its resting top, by exactly

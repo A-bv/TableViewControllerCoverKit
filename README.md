@@ -89,7 +89,7 @@ The bar defaults to a standard title and works the same on every device. Large t
 navigationController?.navigationBar.prefersLargeTitles = true
 ```
 
-Note that with large titles the docked title appears as the large title collapses, which happens at the very start of the scroll — so the bar reads as "arriving" a little sooner than with a standard title.
+With large titles the bar fades in step with the title collapsing into its inline position — the same coupling the system uses — which naturally lands a little earlier in the scroll than the standard-title fade.
 
 ## Customization
 
