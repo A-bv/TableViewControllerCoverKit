@@ -1,8 +1,22 @@
 # TableViewControllerCoverKit
 
-A `UITableViewController` whose content scrolls over a cover image — the image sits behind the list with a once‑rendered vignette, stretches with a spring on overscroll, and a navigation bar that fades in as the list scrolls up over it.
+![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
+![Platform](https://img.shields.io/badge/platform-iOS%2015%2B-lightgrey.svg)
+![Swift Package Manager](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)
+![Release](https://img.shields.io/github/v/release/A-bv/TableViewControllerCoverKit?label=release)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-Subclass it and hand it an image; the list itself stays a plain `UITableViewController`. Remove the package and swap the superclass back to `UITableViewController` for a standard list.
+A UIKit `UITableViewController` whose list scrolls over a cover image: the image sits behind the rows with a once‑rendered vignette, springs on overscroll, and the navigation bar fades in as the list rises over it. Subclass it and hand it an image — the list itself stays a plain `UITableViewController`.
+
+## Features
+
+- 🖼️ Cover image behind the list, with the vignette rendered once (not per frame)
+- 🌫️ Navigation bar fades in as the list scrolls up over the cover
+- ☀️ Status bar reads light while the bar floats over the image
+- ↕️ Spring stretch when the cover is pulled down
+- 🔠 Works with standard or large titles
+- 📦 Pure UIKit · no dependencies · iOS 15+
+- ↩️ Drop‑in: remove the package and swap the superclass back to `UITableViewController` for a plain list
 
 ## Demo
 
@@ -19,11 +33,12 @@ Subclass it and hand it an image; the list itself stays a plain `UITableViewCont
 
 ## Requirements
 
-iOS 15
+- iOS 15+
+- Swift 5.9+
 
 ## Installation
 
-Swift Package Manager:
+Add the package in Xcode (**File ▸ Add Package Dependencies…**) or to your `Package.swift`:
 
 ```swift
 .package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "5.0.0")
@@ -108,3 +123,7 @@ With large titles the bar fades in step with the title collapsing into its inlin
 ## Preview
 
 A scrollable `#Preview` ships with the package — open `Previews.swift` in Xcode to see the fade and stretch without building an app.
+
+## License
+
+TableViewControllerCoverKit is available under the MIT License. See [LICENSE](LICENSE).
