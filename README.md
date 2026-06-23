@@ -1,5 +1,6 @@
 # TableViewControllerCoverKit
 
+[![CI](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml/badge.svg)](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml)
 ![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
 ![Platform](https://img.shields.io/badge/platform-iOS%2015%2B-lightgrey.svg)
 ![Swift Package Manager](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)

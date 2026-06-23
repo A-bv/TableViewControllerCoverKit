@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (iOS Simulator)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          DEVICE=$(xcrun simctl list devices available | grep -E '^ *iPhone' | head -1 | sed -E 's/^ *//; s/ \(.*//')
+          echo "Testing on: $DEVICE"
+          xcodebuild test \
+            -scheme TableViewControllerCoverKit \
+            -destination "platform=iOS Simulator,name=$DEVICE"
