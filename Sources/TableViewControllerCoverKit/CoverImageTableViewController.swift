@@ -51,11 +51,6 @@ open class CoverImageTableViewController: UITableViewController {
         static let vignetteIntensity = 0.12
         static let vignetteRadius = 0.2
         static let barFadeDistance: CGFloat = 50
-        static let largeTitleFontSize: CGFloat = 31
-        /// Scroll distance over which a large title collapses into the inline title — the height
-        /// its row adds to the bar. No public API reports it (the bar reports its expanded height
-        /// throughout, even from `sizeThatFits`), so it is a measured constant.
-        static let largeTitleCollapseDistance: CGFloat = 52
     }
 
     private var coverImageView = UIImageView()
@@ -76,10 +71,6 @@ open class CoverImageTableViewController: UITableViewController {
     /// The last fade state pushed to the navigation bar, so the appearance is only rebuilt
     /// while it actually changes (the brief fade) — not on every scroll callback.
     private var lastAppliedBarKey: CGFloat?
-
-    /// The largest navigation-bar height seen — i.e. the expanded large-title height. Used to
-    /// measure how far a large title has collapsed.
-    private var maxBarHeightSeen: CGFloat = 0
 
     /// The largest top safe-area inset seen — the expanded bar area used to anchor the content
     /// below the cover when `expandedBarHeight` isn't overridden.
@@ -171,12 +162,7 @@ open class CoverImageTableViewController: UITableViewController {
         let offset = scrollView.contentOffset.y
 
         let barHeight = navigationController?.navigationBar.frame.height ?? 0
-        if barHeight > 0 { maxBarHeightSeen = max(maxBarHeightSeen, barHeight) }
-
-        barFadeProgress = Self.fadeProgress(
-            largeTitle: navigationController?.navigationBar.prefersLargeTitles == true,
-            offset: offset, barHeight: barHeight,
-            maxBarHeight: maxBarHeightSeen, statusBarHeight: statusBarHeight)
+        barFadeProgress = Self.fadeProgress(offset: offset, barHeight: barHeight, statusBarHeight: statusBarHeight)
         applyBarTransparency()
 
         // Stretch the cover only while the list is pulled past its resting top, by exactly
@@ -190,16 +176,8 @@ open class CoverImageTableViewController: UITableViewController {
     }
 
     /// The bar's fade progress at a scroll position: negative while it floats transparently over
-    /// the image, `0...1` as it fades in. Pure, so both paths are testable without a live bar.
-    /// - Large titles: tracked from the bar's collapse — the offset is pinned to the top while
-    ///   the title docks, so only the bar height moves.
-    /// - Standard title: tracked from how far the list has scrolled up to meet the bar.
-    static func fadeProgress(largeTitle: Bool, offset: CGFloat, barHeight: CGFloat,
-                             maxBarHeight: CGFloat, statusBarHeight: CGFloat) -> CGFloat {
-        if largeTitle {
-            let collapse = min(1, max(0, (maxBarHeight - barHeight) / Constants.largeTitleCollapseDistance))
-            return collapse * 2 - 1
-        }
+    /// the image, `0...1` as the list scrolls up to meet the bar. Pure, so it's testable directly.
+    static func fadeProgress(offset: CGFloat, barHeight: CGFloat, statusBarHeight: CGFloat) -> CGFloat {
         let fadeStart = barHeight + 2 * statusBarHeight
         return min(1, (offset + fadeStart) / Constants.barFadeDistance)
     }
@@ -220,12 +198,6 @@ open class CoverImageTableViewController: UITableViewController {
         appearance.backgroundColor = backgroundColor
         appearance.shadowColor = .clear
         appearance.titleTextAttributes = [.foregroundColor: textColor]
-        appearance.largeTitleTextAttributes = [
-            .foregroundColor: UIColor.white,
-            // Scaled with Dynamic Type so the large title grows with the user's text size.
-            .font: UIFontMetrics(forTextStyle: .largeTitle)
-                .scaledFont(for: .systemFont(ofSize: Constants.largeTitleFontSize, weight: .bold)),
-        ]
         navigationItem.standardAppearance = appearance
         navigationItem.scrollEdgeAppearance = appearance
         navigationItem.compactAppearance = appearance

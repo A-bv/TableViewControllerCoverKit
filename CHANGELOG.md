@@ -4,7 +4,9 @@ All notable changes are documented here. This project adheres to [Semantic Versi
 
 ## [Unreleased]
 
-- Internal: extracted the bar-fade math into a pure, unit-tested helper and removed a vestigial property; added continuous integration. No behavior change.
+- **Removed large-title support.** The bar fade now targets the standard title only — simpler to use and explain.
+- Slimmed the README to the essentials with a single demo GIF.
+- Internal: extracted the bar-fade math into a pure, unit-tested helper; removed a vestigial property; added continuous integration.
 
 ## [5.3.1]
 

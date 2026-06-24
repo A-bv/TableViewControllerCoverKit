@@ -121,29 +121,13 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertNotNil((sut.tableView.backgroundView?.subviews.first as? UIImageView)?.image)
     }
 
-    func testFadeProgress_largeTitle_transparentExpanded_opaqueCollapsed() {
-        // Expanded (bar at its max height): floats transparently over the image.
-        XCTAssertLessThan(
-            CoverImageTableViewController.fadeProgress(
-                largeTitle: true, offset: -400, barHeight: 106, maxBarHeight: 106, statusBarHeight: 54),
-            0)
-        // Fully collapsed (bar shrunk by the collapse distance): opaque.
-        XCTAssertEqual(
-            CoverImageTableViewController.fadeProgress(
-                largeTitle: true, offset: -100, barHeight: 106 - 52, maxBarHeight: 106, statusBarHeight: 54),
-            1, accuracy: 0.001)
-    }
-
-    func testFadeProgress_standardTitle_fadesAsTheListScrollsUp() {
+    func testFadeProgress_transparentOverImage_opaquePastTheBar() {
         // Resting over the image: transparent.
         XCTAssertLessThan(
-            CoverImageTableViewController.fadeProgress(
-                largeTitle: false, offset: -400, barHeight: 44, maxBarHeight: 44, statusBarHeight: 54),
-            0)
+            CoverImageTableViewController.fadeProgress(offset: -400, barHeight: 44, statusBarHeight: 54), 0)
         // Scrolled up past the bar: opaque.
         XCTAssertEqual(
-            CoverImageTableViewController.fadeProgress(
-                largeTitle: false, offset: 400, barHeight: 44, maxBarHeight: 44, statusBarHeight: 54),
+            CoverImageTableViewController.fadeProgress(offset: 400, barHeight: 44, statusBarHeight: 54),
             1, accuracy: 0.001)
     }
 

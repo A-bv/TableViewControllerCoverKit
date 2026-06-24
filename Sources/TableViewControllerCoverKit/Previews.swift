@@ -23,8 +23,6 @@ private final class CoverDemoListController: CoverImageTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Cover"
-        // Defaults to a standard title bar. Large titles are supported too — set
-        // `navigationController?.navigationBar.prefersLargeTitles = true` to opt in.
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         barBackgroundColor = .systemBackground
         setCoverImage(Self.sampleCover())
