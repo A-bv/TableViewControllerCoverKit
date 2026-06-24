@@ -1,14 +1,12 @@
 # TableViewControllerCoverKit
 
-A `UITableViewController` whose list scrolls over a cover image — with a vignette, a navigation bar that fades in, and a spring stretch on overscroll. Requires iOS 15+.
+A `UITableViewController` whose list scrolls over a cover image — vignette, a navigation bar that fades in, and a spring stretch on overscroll. iOS 15+.
 
 <p align="center">
-  <img src="Docs/demo-default.gif" width="260" alt="Cover effect demo">
+  <img src="Docs/demo-default.gif" width="260">
 </p>
 
 ## Installation
-
-Swift Package Manager:
 
 ```swift
 .package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "5.0.0")
@@ -16,17 +14,16 @@ Swift Package Manager:
 
 ## Usage
 
-Subclass `CoverImageTableViewController`, set a cover image, and drive the list like any `UITableViewController`. Present it inside a `UINavigationController`:
+Subclass `CoverImageTableViewController`, present it in a `UINavigationController`, set a cover image, and fill the list as usual:
 
 ```swift
 import TableViewControllerCoverKit
 
-final class MyListViewController: CoverImageTableViewController {
+final class MyList: CoverImageTableViewController {
     private let items = ["One", "Two", "Three"]
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Cover"
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         setCoverImage(UIImage(named: "cover"))
     }
@@ -37,9 +34,7 @@ final class MyListViewController: CoverImageTableViewController {
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        var config = cell.defaultContentConfiguration()
-        config.text = items[indexPath.row]
-        cell.contentConfiguration = config
+        cell.textLabel?.text = items[indexPath.row]
         return cell
     }
 }
@@ -47,4 +42,4 @@ final class MyListViewController: CoverImageTableViewController {
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT
