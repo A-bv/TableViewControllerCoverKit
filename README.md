@@ -1,5 +1,11 @@
 # TableViewControllerCoverKit
 
+[![CI](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml/badge.svg)](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml)
+![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
+![Platforms](https://img.shields.io/badge/Platforms-iOS%2015%2B-blue.svg)
+![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)
+![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)
+
 A `UITableViewController` whose list scrolls over a cover image — vignette, a navigation bar that fades in, and a spring stretch on overscroll. iOS 15+.
 
 <p align="center">
