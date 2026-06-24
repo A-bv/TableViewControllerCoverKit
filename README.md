@@ -6,7 +6,7 @@
 ![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)
 
-A `UITableViewController` whose list scrolls over a cover image — vignette, a navigation bar that fades in, and a spring stretch on overscroll. iOS 15+.
+A `UITableViewController` subclass that renders your table list over a cover image with a gorgeous fade effect, navigation bar that transitions in, and a spring stretch on overscroll.
 
 <p align="center">
   <img src="Docs/demo-default.gif" width="260">
@@ -14,13 +14,22 @@ A `UITableViewController` whose list scrolls over a cover image — vignette, a 
 
 ## Installation
 
+### Swift Package Manager
+
+Add this package in Xcode: **File → Add Packages** and enter:
+```
+https://github.com/A-bv/TableViewControllerCoverKit
+```
+
+Or add this to your `Package.swift`:
+
 ```swift
 .package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "5.0.0")
 ```
 
-## Usage
+## Quick Start
 
-Subclass `CoverImageTableViewController`, present it in a `UINavigationController`, set a cover image, and fill the list as usual:
+Subclass `CoverImageTableViewController`, present it in a `UINavigationController`, set your cover image, and implement the standard table view data source methods:
 
 ```swift
 import TableViewControllerCoverKit
