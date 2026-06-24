@@ -97,7 +97,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
 
         XCTAssertNotEqual(portraitInset, sut.tableView.contentInset.top)
         XCTAssertNotEqual(portraitCoverHeight, cover()?.frame.height)
-        XCTAssertEqual(cover()?.frame.height ?? 0, 390 / 2 + sut.coverCornerRadius, accuracy: 0.5)
+        XCTAssertEqual(cover()?.frame.height ?? 0, 390 / 2 + 22, accuracy: 0.5)
     }
 
     func testExpandedBarHeight_overrideChangesTheContentInset() {

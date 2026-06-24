@@ -2,7 +2,6 @@ import UIKit
 
 open class CoverImageTableViewController: UITableViewController {
 
-    public var coverCornerRadius: CGFloat = 22
     public var expandedBarHeight: CGFloat?
 
     public var barBackgroundColor: UIColor = .systemBackground {
@@ -27,6 +26,7 @@ open class CoverImageTableViewController: UITableViewController {
         static let vignetteIntensity = 0.12
         static let vignetteRadius = 0.2
         static let barFadeDistance: CGFloat = 50
+        static let coverOverlap: CGFloat = 22
     }
 
     private var coverImageView = UIImageView()
@@ -71,14 +71,14 @@ open class CoverImageTableViewController: UITableViewController {
     }
 
     private var coverDisplaySize: CGSize {
-        CGSize(width: view.bounds.width, height: view.bounds.height / 2 + coverCornerRadius)
+        CGSize(width: view.bounds.width, height: view.bounds.height / 2 + Constants.coverOverlap)
     }
 
     private func configureContentInsets() {
         maxSafeAreaTopSeen = max(maxSafeAreaTopSeen, view.safeAreaInsets.top)
         let barArea = expandedBarHeight.map { $0 + statusBarHeight } ?? maxSafeAreaTopSeen
         let halfHeight = view.bounds.height / 2
-        let indicator = halfHeight - (barArea - statusBarHeight) + coverCornerRadius + Constants.scrollIndicatorPadding
+        let indicator = halfHeight - (barArea - statusBarHeight) + Constants.coverOverlap + Constants.scrollIndicatorPadding
         tableView.contentInset = UIEdgeInsets(top: halfHeight - barArea, left: 0, bottom: 0, right: 0)
         tableView.verticalScrollIndicatorInsets = UIEdgeInsets(top: indicator, left: 0, bottom: 0, right: 0)
     }
