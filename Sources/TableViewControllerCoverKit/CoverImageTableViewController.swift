@@ -1,35 +1,18 @@
 import UIKit
 
-/// A `UITableViewController` whose list scrolls over a cover image: the image sits behind the
-/// rows with a once-rendered vignette, springs on overscroll, and a navigation bar that fades
-/// in as the list rises over it. Subclass it and hand it an image:
-///
-///     final class MyList: CoverImageTableViewController {
-///         override func viewDidLoad() {
-///             super.viewDidLoad()
-///             setCoverImage(UIImage(named: "cover"))
-///         }
-///     }
 open class CoverImageTableViewController: UITableViewController {
 
-    /// Corner radius where the list meets the image.
     public var coverCornerRadius: CGFloat = 22
-
-    /// Override for the bar area that positions the content below the cover.
-    /// Derived from the top safe-area inset when `nil`.
     public var expandedBarHeight: CGFloat?
 
-    /// The bar's background once it has fully faded in.
     public var barBackgroundColor: UIColor = .systemBackground {
         didSet { lastAppliedBarKey = nil }
     }
 
-    /// Set while a modal covers this screen so the status bar reads normally.
     public var suspendsCoverStatusBarStyle = false {
         didSet { setNeedsStatusBarAppearanceUpdate() }
     }
 
-    /// Negative while the bar floats over the image, 0...1 while fading in.
     private var barFadeProgress: CGFloat = 0 {
         didSet { setNeedsStatusBarAppearanceUpdate() }
     }
@@ -56,13 +39,9 @@ open class CoverImageTableViewController: UITableViewController {
     private var lastAppliedBarKey: CGFloat?
     private var maxSafeAreaTopSeen: CGFloat = 0
 
-    // MARK: - Cover
-
-    /// Installs `image` behind the list and pushes the content below its visible half. Passing
-    /// `nil` keeps the current image and just refreshes the layout.
     public func setCoverImage(_ image: UIImage?) {
         if let image { sourceImage = image }
-        installedCoverSize = .zero          // force a re-render
+        installedCoverSize = .zero
         installCoverIfNeeded()
     }
 
@@ -71,8 +50,6 @@ open class CoverImageTableViewController: UITableViewController {
         installCoverIfNeeded()
     }
 
-    /// Renders the cover and refreshes the insets, but only when the display size changed — so
-    /// the vignette isn't re-run on every layout pass.
     private func installCoverIfNeeded() {
         guard let sourceImage else { return }
         let size = coverDisplaySize
@@ -87,8 +64,6 @@ open class CoverImageTableViewController: UITableViewController {
         tableView.backgroundView = coverBackgroundView
         configureContentInsets()
 
-        // Rest the content below the cover once — the inset is applied after the scroll view
-        // sets its initial offset, so it has to be positioned explicitly.
         if !hasPositionedContent {
             hasPositionedContent = true
             tableView.contentOffset = CGPoint(x: 0, y: -tableView.adjustedContentInset.top)
@@ -108,7 +83,6 @@ open class CoverImageTableViewController: UITableViewController {
         tableView.verticalScrollIndicatorInsets = UIEdgeInsets(top: indicator, left: 0, bottom: 0, right: 0)
     }
 
-    /// Status-bar height from this controller's own scene (correct under multi-window).
     private var statusBarHeight: CGFloat {
         let scene = view.window?.windowScene
             ?? UIApplication.shared.connectedScenes
@@ -117,11 +91,9 @@ open class CoverImageTableViewController: UITableViewController {
         return scene?.statusBarManager?.statusBarFrame.height ?? 0
     }
 
-    // MARK: - Bar fade + spring stretch
-
     open override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        lastAppliedBarKey = nil          // re-apply: another screen may have changed the bar
+        lastAppliedBarKey = nil
         applyBarTransparency()
     }
 
@@ -131,19 +103,14 @@ open class CoverImageTableViewController: UITableViewController {
         barFadeProgress = Self.fadeProgress(offset: offset, barHeight: barHeight, statusBarHeight: statusBarHeight)
         applyBarTransparency()
 
-        // Stretch the cover by the overscroll once the list is pulled past its resting top.
         let restOffset = -scrollView.adjustedContentInset.top
         coverImageView.frame.size.height = coverDisplaySize.height + max(0, restOffset - offset)
     }
 
-    /// Negative while the bar floats transparently over the image, 0...1 as the list scrolls up
-    /// to meet the bar. Pure, so it's testable directly.
     static func fadeProgress(offset: CGFloat, barHeight: CGFloat, statusBarHeight: CGFloat) -> CGFloat {
         min(1, (offset + barHeight + 2 * statusBarHeight) / Constants.barFadeDistance)
     }
 
-    /// Rebuilds the bar appearance only through the fade — it's constant while transparent
-    /// (progress < 0) and while fully opaque (progress == 1).
     private func applyBarTransparency() {
         let key: CGFloat = barFadeProgress < 0 ? -1 : barFadeProgress
         guard key != lastAppliedBarKey else { return }
@@ -164,10 +131,6 @@ open class CoverImageTableViewController: UITableViewController {
         navigationController?.navigationBar.tintColor = textColor
     }
 
-    // MARK: - Image rendering
-
-    /// Applies the vignette once into a bitmap (a CIImage-backed image would re-run the filter
-    /// every frame as the stretch resizes the view). Returns the input if the filter is missing.
     private func vignetted(_ image: UIImage) -> UIImage {
         guard let input = CIImage(image: image), let filter = CIFilter(name: "CIVignetteEffect") else { return image }
         filter.setValue(input, forKey: kCIInputImageKey)
@@ -178,7 +141,6 @@ open class CoverImageTableViewController: UITableViewController {
         return UIImage(cgImage: cg, scale: image.scale, orientation: image.imageOrientation)
     }
 
-    /// Scales `image` to fill the cover's display size (aspect fill, centre-cropped).
     private func resizedToDisplay(_ image: UIImage) -> UIImage {
         let size = coverDisplaySize
         return UIGraphicsImageRenderer(size: size).image { _ in

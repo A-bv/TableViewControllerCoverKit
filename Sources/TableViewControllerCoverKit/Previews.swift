@@ -2,9 +2,6 @@
 import SwiftUI
 import UIKit
 
-// Scrollable living preview: a list with a sample cover. Scroll up to see the bar fade
-// in; pull down to see the cover stretch. Uses `PreviewProvider` (not the `#Preview`
-// macro) so the package stays iOS 15+.
 struct Cover_Previews: PreviewProvider {
     static var previews: some View {
         CoverPreview().ignoresSafeArea()
