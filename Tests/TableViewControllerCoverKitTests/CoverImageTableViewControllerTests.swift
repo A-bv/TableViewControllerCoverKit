@@ -112,15 +112,6 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertNotEqual(derivedInset, overridden.tableView.contentInset.top)
     }
 
-    func testSetCoverImageNil_keepsThePreviousCover() {
-        let sut = makeSUT()
-        sut.setCoverImage(makeImage())
-        XCTAssertNotNil((sut.tableView.backgroundView?.subviews.first as? UIImageView)?.image)
-
-        sut.setCoverImage(nil)                      // keep the previous image, just refresh layout
-        XCTAssertNotNil((sut.tableView.backgroundView?.subviews.first as? UIImageView)?.image)
-    }
-
     func testFadeProgress_transparentOverImage_opaquePastTheBar() {
         // Resting over the image: transparent.
         XCTAssertLessThan(

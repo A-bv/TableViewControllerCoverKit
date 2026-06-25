@@ -40,7 +40,7 @@ final class MyList: CoverImageTableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
-        setCoverImage(UIImage(named: "cover"))
+        if let cover = UIImage(named: "cover") { setCoverImage(cover) }
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {

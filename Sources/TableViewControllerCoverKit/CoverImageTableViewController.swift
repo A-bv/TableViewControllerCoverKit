@@ -12,7 +12,7 @@ open class CoverImageTableViewController: UITableViewController {
         didSet { setNeedsStatusBarAppearanceUpdate() }
     }
 
-    private var barFadeProgress: CGFloat = 0 {
+    private var barFadeProgress: CGFloat = -1 {
         didSet { setNeedsStatusBarAppearanceUpdate() }
     }
 
@@ -39,8 +39,8 @@ open class CoverImageTableViewController: UITableViewController {
     private var lastAppliedBarKey: CGFloat?
     private var maxSafeAreaTopSeen: CGFloat = 0
 
-    public func setCoverImage(_ image: UIImage?) {
-        if let image { sourceImage = image }
+    public func setCoverImage(_ image: UIImage) {
+        sourceImage = image
         installedCoverSize = .zero
         installCoverIfNeeded()
     }
