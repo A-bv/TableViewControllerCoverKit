@@ -24,7 +24,7 @@ https://github.com/A-bv/TableViewControllerCoverKit
 Or add this to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "6.0.0")
+.package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "7.0.0")
 ```
 
 ## Quick Start
