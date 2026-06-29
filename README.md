@@ -12,6 +12,12 @@ A `UITableViewController` subclass that renders your table list over a cover ima
   <img src="Docs/demo-default.gif" width="260">
 </p>
 
+## Requirements
+
+- iOS 15+
+- UIKit
+- The controller must be embedded in a `UINavigationController` for the bar fade and status-bar transitions to work.
+
 ## Installation
 
 ### Swift Package Manager
@@ -24,7 +30,7 @@ https://github.com/A-bv/TableViewControllerCoverKit
 Or add this to your `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "7.0.0")
+.package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "7.1.0")
 ```
 
 ## Quick Start
@@ -53,6 +59,26 @@ final class MyList: CoverImageTableViewController {
         return cell
     }
 }
+```
+
+## API
+
+Everything is on `CoverImageTableViewController`:
+
+| Member | Description |
+| --- | --- |
+| `setCoverImage(_ image: UIImage)` | Sets (or replaces) the cover image. Resizing and the vignette run off the main thread; the image is assigned once ready. |
+| `barBackgroundColor: UIColor` | Colour the navigation bar fades to as the list scrolls up past the cover. Defaults to `.systemBackground`. |
+| `expandedBarHeight: CGFloat?` | Override for the resting top inset. When `nil` (default) it's derived from the safe area. |
+| `coverStatusBarStyle: UIStatusBarStyle` | Status bar style (and bar foreground colour) while resting over the cover. Defaults to `.lightContent`; use `.darkContent` for light covers. |
+| `suspendsCoverStatusBarStyle: Bool` | When `true`, forces the default status bar style instead of `coverStatusBarStyle`. Defaults to `false`. |
+
+## Development
+
+The package is iOS-only (UIKit). `swift build` / `swift test` target macOS and fail with *"no such module 'UIKit'"* — run the tests on an iOS simulator instead:
+
+```sh
+xcodebuild test -scheme TableViewControllerCoverKit -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
 ## License

@@ -20,6 +20,15 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         }
     }
 
+    /// The cover is now rendered off the main thread, so wait until the image lands. Uses a
+    /// predicate expectation so the main run loop (and thus the main dispatch queue that delivers
+    /// the rendered image) is actually drained while we wait.
+    private func wait(until condition: @escaping () -> Bool, timeout: TimeInterval = 3) {
+        let predicate = NSPredicate { _, _ in condition() }
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: nil)
+        wait(for: [expectation], timeout: timeout)
+    }
+
     func testSetCoverImage_installsTheBackgroundAndPushesContentDown() {
         let sut = makeSUT()
         sut.setCoverImage(makeImage())
@@ -33,6 +42,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         sut.setCoverImage(makeImage())
 
         let cover = sut.tableView.backgroundView?.subviews.first as? UIImageView
+        wait(until: { cover?.image != nil })
         XCTAssertLessThan(cover?.image?.size.width ?? .infinity, 1200)
     }
 
@@ -142,5 +152,44 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         sut.scrollViewDidScroll(sut.tableView)
         XCTAssertEqual(sut.preferredStatusBarStyle, .default)
         XCTAssertEqual(sut.navigationItem.standardAppearance?.backgroundColor?.cgColor.alpha ?? 0, 1, accuracy: 0.01)
+    }
+
+    func testNavigationBarTintColor_isRestoredWhenTheControllerDisappears() {
+        let sut = CoverImageTableViewController()
+        let nav = UINavigationController(rootViewController: sut)
+        sut.view.layoutIfNeeded()
+        sut.setCoverImage(makeImage())
+
+        let original = UIColor.systemRed
+        nav.navigationBar.tintColor = original
+        sut.viewWillAppear(false)
+
+        // Over the cover the bar tint is forced (white), diverging from the original.
+        sut.tableView.contentOffset = CGPoint(x: 0, y: -400)
+        sut.scrollViewDidScroll(sut.tableView)
+        XCTAssertNotEqual(nav.navigationBar.tintColor, original)
+
+        // On the way out it must be put back so it doesn't bleed into the next controller.
+        sut.viewWillDisappear(false)
+        XCTAssertEqual(nav.navigationBar.tintColor, original)
+    }
+
+    func testCoverStatusBarStyle_isConfigurableForLightCovers() {
+        let sut = makeSUT()
+        sut.setCoverImage(makeImage())
+        sut.coverStatusBarStyle = .darkContent
+
+        sut.tableView.contentOffset = CGPoint(x: 0, y: -400)
+        sut.scrollViewDidScroll(sut.tableView)
+        XCTAssertEqual(sut.preferredStatusBarStyle, .darkContent)
+    }
+
+    func testExpandedBarHeight_neverDrivesContentInsetNegative() {
+        let sut = makeSUT(width: 390, height: 400)   // deliberately short view
+        sut.expandedBarHeight = 1000                 // absurdly large override
+        sut.setCoverImage(makeImage())
+
+        XCTAssertGreaterThanOrEqual(sut.tableView.contentInset.top, 0)
+        XCTAssertGreaterThanOrEqual(sut.tableView.verticalScrollIndicatorInsets.top, 0)
     }
 }
