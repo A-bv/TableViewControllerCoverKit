@@ -19,18 +19,15 @@ jobs:
 
       - name: Run tests
         run: |
-          # Pick the newest available iPhone simulator deterministically (highest model number),
-          # rather than whatever happens to be first in the list.
-          DEVICE=$(xcrun simctl list devices available \
-            | grep -E '^ *iPhone' \
-            | sed -E 's/^ *//; s/ \(.*//' \
-            | sort -V \
-            | tail -1)
-          if [ -z "$DEVICE" ]; then
+          # Select a simulator by UDID, not by name: device names can contain parentheses
+          # (e.g. "iPhone SE (3rd generation)") that break name-based parsing/matching.
+          UDID=$(xcrun simctl list devices available --json \
+            | python3 -c "import json,sys; devs=json.load(sys.stdin)['devices']; print(next((d['udid'] for rt in devs for d in devs[rt] if d['name'].startswith('iPhone')), ''))")
+          if [ -z "$UDID" ]; then
             echo "::error::No available iPhone simulator found"
             exit 1
           fi
-          echo "Testing on: $DEVICE"
+          echo "Testing on simulator UDID: $UDID"
           xcodebuild test \
             -scheme TableViewControllerCoverKit \
-            -destination "platform=iOS Simulator,name=$DEVICE"
+            -destination "platform=iOS Simulator,id=$UDID"
