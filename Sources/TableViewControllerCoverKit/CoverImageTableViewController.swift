@@ -2,12 +2,18 @@ import UIKit
 
 open class CoverImageTableViewController: UITableViewController {
 
+    /// Overrides the resting top inset the cover leaves for the navigation bar. When `nil` (the
+    /// default) the inset is derived from the safe-area top.
     public var expandedBarHeight: CGFloat?
 
+    /// Colour the navigation bar fades to as the list scrolls up past the cover image. Defaults to
+    /// `.systemBackground`.
     public var barBackgroundColor: UIColor = .systemBackground {
         didSet { lastAppliedBarKey = nil }
     }
 
+    /// When `true`, forces the default status bar style instead of `coverStatusBarStyle` while the
+    /// list rests over the cover. Defaults to `false`.
     public var suspendsCoverStatusBarStyle = false {
         didSet { setNeedsStatusBarAppearanceUpdate() }
     }
@@ -50,6 +56,8 @@ open class CoverImageTableViewController: UITableViewController {
     private var maxSafeAreaTopSeen: CGFloat = 0
     private var savedBarTintColor: UIColor?
 
+    /// Sets (or replaces) the cover image. The resize and vignette run off the main thread, so the
+    /// rendered image is assigned once ready and may appear a frame after this call returns.
     public func setCoverImage(_ image: UIImage) {
         sourceImage = image
         installedCoverSize = .zero
@@ -59,6 +67,10 @@ open class CoverImageTableViewController: UITableViewController {
     open override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         installCoverIfNeeded()
+        // Install is gated on cover *size*, which doesn't change when only the safe area does
+        // (e.g. the status bar resolving once the view enters a window). Recompute the insets on
+        // every pass so they stay correct in that case — it's cheap arithmetic.
+        if installedCoverSize != .zero { configureContentInsets() }
     }
 
     private func installCoverIfNeeded() {

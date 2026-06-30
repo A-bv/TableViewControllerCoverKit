@@ -189,4 +189,19 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(sut.tableView.contentInset.top, 0)
         XCTAssertGreaterThanOrEqual(sut.tableView.verticalScrollIndicatorInsets.top, 0)
     }
+
+    func testContentInsets_recomputeOnLayoutNotJustOnResize() {
+        let sut = makeSUT()
+        renderingSynchronously(sut)
+        sut.setCoverImage(makeImage())
+        let before = sut.tableView.contentInset.top
+
+        // A value that affects the inset changes after the cover is installed. A layout pass (from
+        // any source — e.g. the safe area resolving once in a window) must pick it up, even though
+        // the cover size hasn't changed and the size-gated install short-circuits.
+        sut.expandedBarHeight = 300
+        sut.viewDidLayoutSubviews()
+
+        XCTAssertNotEqual(before, sut.tableView.contentInset.top)
+    }
 }
