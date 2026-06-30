@@ -152,6 +152,8 @@ open class CoverImageTableViewController: UITableViewController {
         navigationController?.navigationBar.tintColor = savedBarTintColor
     }
 
+    /// Drives the bar fade and the cover's overscroll stretch. If you override this (or any of the
+    /// other overridden lifecycle methods), call `super` or those effects stop working.
     open override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let offset = scrollView.contentOffset.y
         let barHeight = navigationController?.navigationBar.frame.height ?? 0

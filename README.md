@@ -73,6 +73,13 @@ Everything is on `CoverImageTableViewController`:
 | `coverStatusBarStyle: UIStatusBarStyle` | Status bar style (and bar foreground colour) while resting over the cover. Defaults to `.lightContent`; use `.darkContent` for light covers. |
 | `suspendsCoverStatusBarStyle: Bool` | When `true`, forces the default status bar style instead of `coverStatusBarStyle`. Defaults to `false`. |
 
+## Subclassing
+
+`CoverImageTableViewController` drives its effects from `viewWillAppear`,
+`viewWillDisappear`, `viewDidLayoutSubviews`, and `scrollViewDidScroll`. If you
+override any of them in your subclass, call `super` — otherwise the bar fade,
+cover stretch, or inset positioning will stop working.
+
 ## Development
 
 The package is iOS-only (UIKit). `swift build` / `swift test` target macOS and fail with *"no such module 'UIKit'"* — run the tests on an iOS simulator instead:
