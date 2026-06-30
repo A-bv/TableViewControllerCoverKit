@@ -82,16 +82,23 @@ open class CoverImageTableViewController: UITableViewController {
         renderCover(sourceImage, at: size)
     }
 
-    /// Resizing plus the Core Image vignette are the expensive part, so run them off the main
-    /// thread and assign the result back on main. The `installedCoverSize` re-check drops any
-    /// render that a newer size (e.g. a fast rotation) has already superseded.
+    /// Runs a cover render: `render` does the heavy resize + vignette, `apply` assigns the result.
+    /// Defaults to rendering off the main thread and applying back on it; overridable so tests can
+    /// run it synchronously and deterministically rather than racing a wall-clock timeout.
+    var performCoverRender: (_ render: @escaping () -> UIImage, _ apply: @escaping (UIImage) -> Void) -> Void = { render, apply in
+        DispatchQueue.global(qos: .userInitiated).async {
+            let rendered = render()
+            DispatchQueue.main.async { apply(rendered) }
+        }
+    }
+
+    /// Resizing plus the Core Image vignette are the expensive part, so they run off the main
+    /// thread (see `performCoverRender`). The `installedCoverSize` re-check drops any render that
+    /// a newer size (e.g. a fast rotation) has already superseded.
     private func renderCover(_ image: UIImage, at size: CGSize) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let rendered = Self.vignetted(Self.resizedToDisplay(image, to: size))
-            DispatchQueue.main.async {
-                guard let self, self.installedCoverSize == size else { return }
-                self.coverImageView.image = rendered
-            }
+        performCoverRender({ Self.vignetted(Self.resizedToDisplay(image, to: size)) }) { [weak self] rendered in
+            guard let self, self.installedCoverSize == size else { return }
+            self.coverImageView.image = rendered
         }
     }
 

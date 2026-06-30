@@ -20,13 +20,10 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         }
     }
 
-    /// The cover is now rendered off the main thread, so wait until the image lands. Uses a
-    /// predicate expectation so the main run loop (and thus the main dispatch queue that delivers
-    /// the rendered image) is actually drained while we wait.
-    private func wait(until condition: @escaping () -> Bool, timeout: TimeInterval = 3) {
-        let predicate = NSPredicate { _, _ in condition() }
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: nil)
-        wait(for: [expectation], timeout: timeout)
+    /// The cover normally renders off the main thread; tests render synchronously so assertions
+    /// don't race a wall-clock timeout (which is flaky on slow/contended CI runners).
+    private func renderingSynchronously(_ sut: CoverImageTableViewController) {
+        sut.performCoverRender = { render, apply in apply(render()) }
     }
 
     func testSetCoverImage_installsTheBackgroundAndPushesContentDown() {
@@ -39,10 +36,10 @@ final class CoverImageTableViewControllerTests: XCTestCase {
 
     func testSetCoverImage_rendersAtDisplaySizeNotSourceSize() {
         let sut = makeSUT()
+        renderingSynchronously(sut)
         sut.setCoverImage(makeImage())
 
         let cover = sut.tableView.backgroundView?.subviews.first as? UIImageView
-        wait(until: { cover?.image != nil })
         XCTAssertLessThan(cover?.image?.size.width ?? .infinity, 1200)
     }
 
