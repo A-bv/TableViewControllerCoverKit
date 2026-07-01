@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Lint (swift-format)
+        run: swift format lint --strict --recursive Sources Tests
+
       - name: Run tests
         run: |
           # Select a simulator by UDID, not by name: device names can contain parentheses
@@ -30,4 +33,5 @@ jobs:
           echo "Testing on simulator UDID: $UDID"
           xcodebuild test \
             -scheme TableViewControllerCoverKit \
-            -destination "platform=iOS Simulator,id=$UDID"
+            -destination "platform=iOS Simulator,id=$UDID" \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
