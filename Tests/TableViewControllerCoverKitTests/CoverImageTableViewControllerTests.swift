@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import TableViewControllerCoverKit
 
 @MainActor
@@ -113,7 +114,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         let derivedInset = derived.tableView.contentInset.top
 
         let overridden = makeSUT()
-        overridden.expandedBarHeight = 200          // manual override instead of the derived value
+        overridden.expandedBarHeight = 200  // manual override instead of the derived value
         overridden.setCoverImage(makeImage())
 
         XCTAssertNotEqual(derivedInset, overridden.tableView.contentInset.top)
@@ -183,15 +184,15 @@ final class CoverImageTableViewControllerTests: XCTestCase {
 
     func testSetCoverImage_ignoresAnEmptyImage() {
         let sut = makeSUT()
-        sut.setCoverImage(UIImage())     // empty (zero-size) input: nothing should install
+        sut.setCoverImage(UIImage())  // empty (zero-size) input: nothing should install
 
         XCTAssertNil(sut.tableView.backgroundView)
         XCTAssertEqual(sut.tableView.contentInset.top, 0)
     }
 
     func testExpandedBarHeight_neverDrivesContentInsetNegative() {
-        let sut = makeSUT(width: 390, height: 400)   // deliberately short view
-        sut.expandedBarHeight = 1000                 // absurdly large override
+        let sut = makeSUT(width: 390, height: 400)  // deliberately short view
+        sut.expandedBarHeight = 1000  // absurdly large override
         sut.setCoverImage(makeImage())
 
         XCTAssertGreaterThanOrEqual(sut.tableView.contentInset.top, 0)

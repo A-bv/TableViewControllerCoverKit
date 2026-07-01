@@ -127,7 +127,8 @@ open class CoverImageTableViewController: UITableViewController {
         maxSafeAreaTopSeen = max(maxSafeAreaTopSeen, view.safeAreaInsets.top)
         let barArea = expandedBarHeight.map { $0 + statusBarHeight } ?? maxSafeAreaTopSeen
         let halfHeight = view.bounds.height / 2
-        let indicator = halfHeight - (barArea - statusBarHeight) + Constants.coverOverlap + Constants.scrollIndicatorPadding
+        let indicator =
+            halfHeight - (barArea - statusBarHeight) + Constants.coverOverlap + Constants.scrollIndicatorPadding
         // Clamp to 0: a large `expandedBarHeight` (or a very short view) can drive these negative,
         // which would pull the first rows up underneath the cover.
         tableView.contentInset = UIEdgeInsets(top: max(0, halfHeight - barArea), left: 0, bottom: 0, right: 0)
@@ -198,7 +199,8 @@ open class CoverImageTableViewController: UITableViewController {
         filter.setValue(Constants.vignetteIntensity, forKey: "inputIntensity")
         filter.setValue(Constants.vignetteRadius, forKey: "inputRadius")
         guard let output = filter.outputImage,
-              let cg = vignetteContext.createCGImage(output, from: input.extent) else { return image }
+            let cg = vignetteContext.createCGImage(output, from: input.extent)
+        else { return image }
         return UIImage(cgImage: cg, scale: image.scale, orientation: image.imageOrientation)
     }
 
