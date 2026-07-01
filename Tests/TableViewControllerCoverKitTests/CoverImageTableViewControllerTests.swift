@@ -181,6 +181,14 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertEqual(sut.preferredStatusBarStyle, .darkContent)
     }
 
+    func testSetCoverImage_ignoresAnEmptyImage() {
+        let sut = makeSUT()
+        sut.setCoverImage(UIImage())     // empty (zero-size) input: nothing should install
+
+        XCTAssertNil(sut.tableView.backgroundView)
+        XCTAssertEqual(sut.tableView.contentInset.top, 0)
+    }
+
     func testExpandedBarHeight_neverDrivesContentInsetNegative() {
         let sut = makeSUT(width: 390, height: 400)   // deliberately short view
         sut.expandedBarHeight = 1000                 // absurdly large override
