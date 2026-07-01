@@ -59,6 +59,9 @@ open class CoverImageTableViewController: UITableViewController {
     /// Sets (or replaces) the cover image. The resize and vignette run off the main thread, so the
     /// rendered image is assigned once ready and may appear a frame after this call returns.
     public func setCoverImage(_ image: UIImage) {
+        // A zero-dimension image (failed decode, empty asset) would divide by zero in the display
+        // resize and render blank. Reject it and keep any cover already set.
+        guard image.size.width > 0, image.size.height > 0 else { return }
         sourceImage = image
         installedCoverSize = .zero
         installCoverIfNeeded()
