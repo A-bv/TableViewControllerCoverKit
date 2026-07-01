@@ -47,7 +47,7 @@ open class CoverImageTableViewController: UITableViewController {
 
     private var coverImageView = UIImageView()
     private let coverBackgroundView = UIView()
-    private static let vignetteContext = CIContext()
+    private nonisolated static let vignetteContext = CIContext()
 
     private var sourceImage: UIImage?
     private var installedCoverSize: CGSize = .zero
@@ -97,23 +97,23 @@ open class CoverImageTableViewController: UITableViewController {
         renderCover(sourceImage, at: size)
     }
 
-    /// Runs a cover render: `render` does the heavy resize + vignette, `apply` assigns the result.
-    /// Defaults to rendering off the main thread and applying back on it; overridable so tests can
-    /// run it synchronously and deterministically rather than racing a wall-clock timeout.
-    var performCoverRender: (_ render: @escaping () -> UIImage, _ apply: @escaping (UIImage) -> Void) -> Void = { render, apply in
-        DispatchQueue.global(qos: .userInitiated).async {
-            let rendered = render()
-            DispatchQueue.main.async { apply(rendered) }
-        }
-    }
+    /// Renders the cover synchronously instead of off the main thread. Off by default; tests flip it
+    /// on so assertions don't race a wall-clock timeout (which is flaky on slow/contended CI runners).
+    var rendersCoverSynchronously = false
 
     /// Resizing plus the Core Image vignette are the expensive part, so they run off the main
-    /// thread (see `performCoverRender`). The `installedCoverSize` re-check drops any render that
-    /// a newer size (e.g. a fast rotation) has already superseded.
+    /// thread. The `installedCoverSize` re-check drops any render that a newer size (e.g. a fast
+    /// rotation) has already superseded.
     private func renderCover(_ image: UIImage, at size: CGSize) {
-        performCoverRender({ Self.vignetted(Self.resizedToDisplay(image, to: size)) }) { [weak self] rendered in
+        let render: @Sendable () -> UIImage = { Self.vignetted(Self.resizedToDisplay(image, to: size)) }
+        let apply: @MainActor (UIImage) -> Void = { [weak self] rendered in
             guard let self, self.installedCoverSize == size else { return }
             self.coverImageView.image = rendered
+        }
+        guard !rendersCoverSynchronously else { return apply(render()) }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let rendered = render()
+            Task { @MainActor in apply(rendered) }
         }
     }
 
@@ -192,7 +192,7 @@ open class CoverImageTableViewController: UITableViewController {
         navigationController?.navigationBar.tintColor = textColor
     }
 
-    private static func vignetted(_ image: UIImage) -> UIImage {
+    private nonisolated static func vignetted(_ image: UIImage) -> UIImage {
         guard let input = CIImage(image: image), let filter = CIFilter(name: "CIVignetteEffect") else { return image }
         filter.setValue(input, forKey: kCIInputImageKey)
         filter.setValue(Constants.vignetteIntensity, forKey: "inputIntensity")
@@ -202,7 +202,7 @@ open class CoverImageTableViewController: UITableViewController {
         return UIImage(cgImage: cg, scale: image.scale, orientation: image.imageOrientation)
     }
 
-    private static func resizedToDisplay(_ image: UIImage, to size: CGSize) -> UIImage {
+    private nonisolated static func resizedToDisplay(_ image: UIImage, to size: CGSize) -> UIImage {
         UIGraphicsImageRenderer(size: size).image { _ in
             let scale = max(size.width / image.size.width, size.height / image.size.height)
             let scaled = CGSize(width: image.size.width * scale, height: image.size.height * scale)

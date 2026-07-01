@@ -23,7 +23,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
     /// The cover normally renders off the main thread; tests render synchronously so assertions
     /// don't race a wall-clock timeout (which is flaky on slow/contended CI runners).
     private func renderingSynchronously(_ sut: CoverImageTableViewController) {
-        sut.performCoverRender = { render, apply in apply(render()) }
+        sut.rendersCoverSynchronously = true
     }
 
     func testSetCoverImage_installsTheBackgroundAndPushesContentDown() {

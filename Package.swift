@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 //
 // iOS-only (UIKit). `swift build` / `swift test` target macOS and fail with "no such module
 // 'UIKit'". Run the tests on any installed iOS simulator (list them with
