@@ -82,10 +82,11 @@ cover stretch, or inset positioning will stop working.
 
 ## Development
 
-The package is iOS-only (UIKit). `swift build` / `swift test` target macOS and fail with *"no such module 'UIKit'"* — run the tests on an iOS simulator instead:
+The package is iOS-only (UIKit). `swift build` / `swift test` target macOS and fail with *"no such module 'UIKit'"* — run the tests on an iOS simulator instead. Pick any simulator installed on your machine (list them with `xcrun simctl list devices available`):
 
 ```sh
-xcodebuild test -scheme TableViewControllerCoverKit -destination 'platform=iOS Simulator,name=iPhone 16'
+xcodebuild test -scheme TableViewControllerCoverKit \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 ## License
