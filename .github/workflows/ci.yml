@@ -2,32 +2,30 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test (iOS Simulator)
-    runs-on: macos-latest
+  build-test:
+    name: Build & Test
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
 
-      - name: Run tests
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build and test
         run: |
-          # Select a simulator by UDID, not by name: device names can contain parentheses
-          # (e.g. "iPhone SE (3rd generation)") that break name-based parsing/matching.
-          UDID=$(xcrun simctl list devices available --json \
-            | python3 -c "import json,sys; devs=json.load(sys.stdin)['devices']; print(next((d['udid'] for rt in devs for d in devs[rt] if d['name'].startswith('iPhone')), ''))")
-          if [ -z "$UDID" ]; then
-            echo "::error::No available iPhone simulator found"
-            exit 1
-          fi
-          echo "Testing on simulator UDID: $UDID"
+          set -o pipefail
+          # Resolve an available iPhone simulator by UDID so CI doesn't break
+          # when the runner image's device roster changes.
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; rows=[x for rt,l in d.items() if 'iOS' in rt for x in l if x['name'].startswith('iPhone')]; print(sorted(rows, key=lambda x: x['name'])[-1]['udid'])")
           xcodebuild test \
             -scheme TableViewControllerCoverKit \
-            -destination "platform=iOS Simulator,id=$UDID"
+            -destination "id=$DEVICE" \
+            CODE_SIGNING_ALLOWED=NO
