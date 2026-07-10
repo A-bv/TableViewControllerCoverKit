@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import TableViewControllerCoverKit
 
 @MainActor
@@ -23,7 +24,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
     /// The cover normally renders off the main thread; tests render synchronously so assertions
     /// don't race a wall-clock timeout (which is flaky on slow/contended CI runners).
     private func renderingSynchronously(_ sut: CoverImageTableViewController) {
-        sut.performCoverRender = { render, apply in apply(render()) }
+        sut.rendersCoverSynchronously = true
     }
 
     func testSetCoverImage_installsTheBackgroundAndPushesContentDown() {
@@ -113,7 +114,7 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         let derivedInset = derived.tableView.contentInset.top
 
         let overridden = makeSUT()
-        overridden.expandedBarHeight = 200          // manual override instead of the derived value
+        overridden.expandedBarHeight = 200  // manual override instead of the derived value
         overridden.setCoverImage(makeImage())
 
         XCTAssertNotEqual(derivedInset, overridden.tableView.contentInset.top)
@@ -181,9 +182,17 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertEqual(sut.preferredStatusBarStyle, .darkContent)
     }
 
+    func testSetCoverImage_ignoresAnEmptyImage() {
+        let sut = makeSUT()
+        sut.setCoverImage(UIImage())  // empty (zero-size) input: nothing should install
+
+        XCTAssertNil(sut.tableView.backgroundView)
+        XCTAssertEqual(sut.tableView.contentInset.top, 0)
+    }
+
     func testExpandedBarHeight_neverDrivesContentInsetNegative() {
-        let sut = makeSUT(width: 390, height: 400)   // deliberately short view
-        sut.expandedBarHeight = 1000                 // absurdly large override
+        let sut = makeSUT(width: 390, height: 400)  // deliberately short view
+        sut.expandedBarHeight = 1000  // absurdly large override
         sut.setCoverImage(makeImage())
 
         XCTAssertGreaterThanOrEqual(sut.tableView.contentInset.top, 0)
@@ -203,5 +212,54 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         sut.viewDidLayoutSubviews()
 
         XCTAssertNotEqual(before, sut.tableView.contentInset.top)
+    }
+
+    /// Exercises the real, shipping async render path (the flag left off) that every other test
+    /// bypasses by rendering synchronously — guarding a regression that breaks the hop back to the
+    /// main actor or never assigns the rendered image.
+    func testSetCoverImage_asyncPathAssignsTheRenderedImage() async {
+        let sut = makeSUT()
+        sut.setCoverImage(makeImage())  // flag left off: real off-main render + main-actor apply
+        let cover = sut.tableView.backgroundView?.subviews.first as? UIImageView
+
+        // Poll until the off-main render assigns the image, breaking as soon as it does. The cap is
+        // deliberately generous: a cold, contended CI runner's first Core Image render can take
+        // several seconds, and the wait only reaches the cap if the async path is actually broken.
+        for _ in 0..<600 {
+            if cover?.image != nil { break }
+            try? await Task.sleep(nanoseconds: 25_000_000)  // 25ms, capped at ~15s total
+        }
+        XCTAssertNotNil(cover?.image, "async render never assigned the cover image")
+    }
+
+    /// The vignette darkens the edges, so a corner pixel must be darker than the centre. This pins
+    /// that the Core Image stage actually runs — its failure path silently returns the input image,
+    /// which would otherwise pass every other assertion.
+    func testVignette_darkensTheCornersRelativeToTheCentre() throws {
+        let sut = makeSUT()
+        renderingSynchronously(sut)
+        sut.setCoverImage(makeImage())
+
+        let cover = try XCTUnwrap((sut.tableView.backgroundView?.subviews.first as? UIImageView)?.image)
+        let centre = pixelBrightness(cover, atX: 0.5, y: 0.5)
+        let corner = pixelBrightness(cover, atX: 0.02, y: 0.02)
+        // Require a visible gap: a uniform dim or a silent no-op (which returns the flat input image)
+        // leaves corner == centre and must not pass.
+        XCTAssertLessThan(
+            corner, centre - 5, "vignette should darken the corner (corner \(corner) vs centre \(centre))")
+    }
+
+    /// Average brightness (0–255) of a single pixel of `image`, sampled at fractional coordinates.
+    private func pixelBrightness(_ image: UIImage, atX fx: CGFloat, y fy: CGFloat) -> CGFloat {
+        guard let cg = image.cgImage else { return .nan }
+        let col = Int((CGFloat(cg.width) - 1) * fx)
+        let row = Int((CGFloat(cg.height) - 1) * fy)
+        var px: [UInt8] = [0, 0, 0, 0]
+        let ctx = CGContext(
+            data: &px, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        ctx?.draw(cg, in: CGRect(x: -col, y: -row, width: cg.width, height: cg.height))
+        return (CGFloat(px[0]) + CGFloat(px[1]) + CGFloat(px[2])) / 3
     }
 }
