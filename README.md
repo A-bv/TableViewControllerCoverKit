@@ -1,93 +1,102 @@
 # TableViewControllerCoverKit
 
-[![CI](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml/badge.svg)](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml)
-![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)
-![Platforms](https://img.shields.io/badge/Platforms-iOS%2015%2B-blue.svg)
-![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)
-![License](https://img.shields.io/badge/License-MIT-lightgrey.svg)
+A `UITableViewController` that shows a cover image behind your list. As you scroll up, the navigation bar fades to a solid colour and the status bar returns to normal; pull down and the image stretches with a spring (see the gif below).
 
-A `UITableViewController` subclass that renders your table list over a cover image with a gorgeous fade effect, navigation bar that transitions in, and a spring stretch on overscroll.
+[![CI](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml/badge.svg)](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml)
+![Swift 6.0](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
+![iOS 15+](https://img.shields.io/badge/iOS-15%2B-007AFF?logo=apple&logoColor=white)
+![SPM](https://img.shields.io/badge/SPM-compatible-success)
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey)](LICENSE)
+
+It is a drop-in subclass with no dependencies: set a cover image, fill the table as usual, and the fade, the status-bar transition, and the overscroll stretch are handled for you.
 
 <p align="center">
-  <img src="Docs/demo-default.gif" width="260">
+  <img src=".github/demo.gif" alt="A list scrolling over a cover image that fades under the navigation bar" width="380">
 </p>
 
-## Requirements
+## Install
 
-- iOS 15+
-- UIKit
-- The controller must be embedded in a `UINavigationController` for the bar fade and status-bar transitions to work.
+Swift Package Manager. In Xcode, **File ▸ Add Package Dependencies…** and paste the URL:
 
-## Installation
-
-### Swift Package Manager
-
-Add this package in Xcode: **File → Add Packages** and enter:
 ```
 https://github.com/A-bv/TableViewControllerCoverKit
 ```
 
-Or add this to your `Package.swift`:
+or declare it in `Package.swift`:
 
 ```swift
 .package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "7.1.0")
 ```
 
-## Quick Start
+## Usage
 
-Subclass `CoverImageTableViewController`, present it in a `UINavigationController`, set your cover image, and implement the standard table view data source methods:
+Subclass `CoverImageTableViewController`, give it a cover image, and fill the table like any table view controller:
 
 ```swift
+import UIKit
 import TableViewControllerCoverKit
 
-final class MyList: CoverImageTableViewController {
-    private let items = ["One", "Two", "Three"]
+final class AlbumViewController: CoverImageTableViewController {
+    private let tracks = ["Intro", "Nightcall", "A Real Hero", "Outro"]
 
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
-        if let cover = UIImage(named: "cover") { setCoverImage(cover) }
+
+        setCoverImage(UIImage(named: "album-art")!)   // the image behind the list
+
+        // Optional. All four have sensible defaults:
+        barBackgroundColor = .systemBackground        // colour the bar fades to past the cover
+        coverStatusBarStyle = .lightContent           // bar text over the cover; .darkContent for light images
+        expandedBarHeight = nil                       // resting space for the bar (nil = from the safe area)
+        suspendsCoverStatusBarStyle = false           // true keeps the system status bar over the cover
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        items.count
+        tracks.count
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-        cell.textLabel?.text = items[indexPath.row]
+        cell.textLabel?.text = tracks[indexPath.row]
         return cell
     }
 }
 ```
 
-## API
+Your controller has to live in a `UINavigationController`, since that is the bar it fades in:
 
-Everything is on `CoverImageTableViewController`:
+```swift
+window.rootViewController = UINavigationController(rootViewController: AlbumViewController())
+```
 
-| Member | Description |
-| --- | --- |
-| `setCoverImage(_ image: UIImage)` | Sets (or replaces) the cover image. Resizing and the vignette run off the main thread; the image is assigned once ready. |
-| `barBackgroundColor: UIColor` | Colour the navigation bar fades to as the list scrolls up past the cover. Defaults to `.systemBackground`. |
-| `expandedBarHeight: CGFloat?` | Override for the resting top inset. When `nil` (default) it's derived from the safe area. |
-| `coverStatusBarStyle: UIStatusBarStyle` | Status bar style (and bar foreground colour) while resting over the cover. Defaults to `.lightContent`; use `.darkContent` for light covers. |
-| `suspendsCoverStatusBarStyle: Bool` | When `true`, forces the default status bar style instead of `coverStatusBarStyle`. Defaults to `false`. |
+If you override `viewWillAppear`, `viewWillDisappear`, `viewDidLayoutSubviews`, or `scrollViewDidScroll`, call `super`, since the effects run inside them.
 
-## Subclassing
+## Behavior
 
-`CoverImageTableViewController` drives its effects from `viewWillAppear`,
-`viewWillDisappear`, `viewDidLayoutSubviews`, and `scrollViewDidScroll`. If you
-override any of them in your subclass, call `super` — otherwise the bar fade,
-cover stretch, or inset positioning will stop working.
+- **Large covers never stall scrolling.** The image is scaled to fill and rendered off the main thread.
+- **It survives rotation and non-fullscreen scenes** like split view and sheets, re-rendering the cover for the new size.
+- **The navigation bar is left clean.** Its tint is restored when the controller disappears, so the cover's colour never bleeds into the next screen.
 
-## Development
+## Implementation
 
-The package is iOS-only (UIKit). `swift build` / `swift test` target macOS and fail with *"no such module 'UIKit'"* — run the tests on an iOS simulator instead:
+A single `UITableViewController` subclass with no dependencies. The cover is a table background view; the fade, the status-bar style, and the overscroll stretch are driven from `scrollViewDidScroll` and the layout pass. The status bar is read from the view's own window scene rather than `UIApplication.shared`, so the library works in app extensions. It builds in Swift 6 under complete strict concurrency.
 
-```sh
-xcodebuild test -scheme TableViewControllerCoverKit -destination 'platform=iOS Simulator,name=iPhone 16'
+## Layout
+
+```text
+Package.swift     ┐
+Sources/          │  the library and its Xcode preview
+Tests/            ┘
+
+README.md         ┐
+LICENSE           ┘  docs, kept at root by convention
+
+.gitignore        the ignore rules
+
+.github/          CI workflow and the demo GIF
 ```
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
