@@ -1,6 +1,6 @@
 # TableViewControllerCoverKit
 
-A `UITableViewController` that shows a cover image behind your list. As you scroll up, the navigation bar fades to a solid colour and the status bar returns to normal; pull down and the image stretches with a spring (see the gif below).
+Cover art that scrolls like the Music app. A `UITableViewController` that shows a cover image behind your list: as you scroll up, the navigation bar fades to a solid colour and the status bar returns to normal; pull down and the image stretches with a spring (see the gif below).
 
 [![CI](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml/badge.svg)](https://github.com/A-bv/TableViewControllerCoverKit/actions/workflows/ci.yml)
 ![Swift 6.0](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
