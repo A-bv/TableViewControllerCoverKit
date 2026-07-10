@@ -281,4 +281,86 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         ctx?.draw(cg, in: CGRect(x: -col, y: -row, width: cg.width, height: cg.height))
         return (CGFloat(px[0]) + CGFloat(px[1]) + CGFloat(px[2])) / 3
     }
+
+    // MARK: - Snapshot
+
+    /// The rendered cover (resize plus vignette from a fixed gradient) must match a committed
+    /// reference image, so a visual regression the numeric tests miss still fails the suite.
+    func testSnapshot_renderedCoverMatchesReference() throws {
+        let sut = makeSUT()
+        renderingSynchronously(sut)
+        sut.setCoverImage(gradientCover())
+
+        let cover = try XCTUnwrap((sut.tableView.backgroundView?.subviews.first as? UIImageView)?.image)
+        try assertSnapshot(cover, named: "rendered-cover")
+    }
+
+    /// A deterministic cover source (a code-drawn gradient, no assets or fonts) so the render is
+    /// stable enough to snapshot across machines.
+    private func gradientCover(_ side: CGFloat = 400) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { context in
+            let colors = [UIColor.systemIndigo.cgColor, UIColor.systemTeal.cgColor] as CFArray
+            let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])!
+            context.cgContext.drawLinearGradient(
+                gradient, start: .zero, end: CGPoint(x: side, y: side), options: [])
+        }
+    }
+
+    /// Records the reference on first run, then fails if the image drifts beyond a tolerance wide
+    /// enough to absorb GPU and anti-aliasing differences between machines.
+    private func assertSnapshot(
+        _ image: UIImage, named name: String,
+        filePath: String = #filePath, file: StaticString = #filePath, line: UInt = #line
+    ) throws {
+        let dir = URL(fileURLWithPath: filePath).deletingLastPathComponent()
+            .appendingPathComponent("__Snapshots__")
+        let reference = dir.appendingPathComponent("\(name).png")
+
+        guard FileManager.default.fileExists(atPath: reference.path) else {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try downsampled(image, grid: 100).pngData()?.write(to: reference)
+            XCTFail("Recorded a reference snapshot at \(reference.path). Commit it and re-run.", file: file, line: line)
+            return
+        }
+
+        let expected = try XCTUnwrap(UIImage(contentsOfFile: reference.path))
+        let (differing, total) = channelDifference(image, expected)
+        let fraction = total == 0 ? 1 : Double(differing) / Double(total)
+        XCTAssertLessThanOrEqual(
+            fraction, 0.03, "cover snapshot drifted by \(Int(fraction * 100))%", file: file, line: line)
+    }
+
+    /// Downsamples both images to a small fixed grid and counts colour channels that differ beyond a
+    /// threshold. The downsample blurs away sub-pixel noise while keeping real changes visible.
+    private func channelDifference(
+        _ lhs: UIImage, _ rhs: UIImage, grid: Int = 100, tolerance: Int = 16
+    ) -> (Int, Int) {
+        let left = normalizedPixels(lhs, grid: grid)
+        let right = normalizedPixels(rhs, grid: grid)
+        guard !left.isEmpty, left.count == right.count else { return (1, 1) }
+        var differing = 0
+        for i in left.indices where abs(Int(left[i]) - Int(right[i])) > tolerance { differing += 1 }
+        return (differing, left.count)
+    }
+
+    /// A small, scale-1 copy of `image`, so the committed reference stays a few KB instead of megabytes.
+    private func downsampled(_ image: UIImage, grid: Int) -> UIImage {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: grid, height: grid), format: format).image { _ in
+            image.draw(in: CGRect(x: 0, y: 0, width: grid, height: grid))
+        }
+    }
+
+    private func normalizedPixels(_ image: UIImage, grid: Int) -> [UInt8] {
+        guard let cg = image.cgImage else { return [] }
+        var data = [UInt8](repeating: 0, count: grid * grid * 4)
+        let ctx = CGContext(
+            data: &data, width: grid, height: grid, bitsPerComponent: 8, bytesPerRow: grid * 4,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        ctx?.interpolationQuality = .high
+        ctx?.draw(cg, in: CGRect(x: 0, y: 0, width: grid, height: grid))
+        return data
+    }
 }
