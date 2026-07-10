@@ -1,8 +1,9 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 //
 // iOS-only (UIKit). `swift build` / `swift test` target macOS and fail with "no such module
-// 'UIKit'". Run the tests on an iOS simulator:
-//   xcodebuild test -scheme TableViewControllerCoverKit -destination 'platform=iOS Simulator,name=iPhone 16'
+// 'UIKit'". Run the tests on any installed iOS simulator (list them with
+// `xcrun simctl list devices available`):
+//   xcodebuild test -scheme TableViewControllerCoverKit -destination 'platform=iOS Simulator,name=iPhone 17'
 import PackageDescription
 
 let package = Package(
