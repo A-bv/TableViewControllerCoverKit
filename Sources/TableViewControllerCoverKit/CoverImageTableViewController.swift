@@ -84,6 +84,7 @@ open class CoverImageTableViewController: UITableViewController {
 
         coverImageView.contentMode = .scaleAspectFill
         coverImageView.clipsToBounds = true
+        coverImageView.isAccessibilityElement = false  // decorative; VoiceOver skips the cover
         coverImageView.frame = CGRect(origin: .zero, size: size)
         if coverImageView.superview == nil { coverBackgroundView.addSubview(coverImageView) }
         tableView.backgroundView = coverBackgroundView
@@ -165,11 +166,19 @@ open class CoverImageTableViewController: UITableViewController {
         applyBarTransparency()
 
         let restOffset = -scrollView.adjustedContentInset.top
-        coverImageView.frame.size.height = coverDisplaySize.height + max(0, restOffset - offset)
+        let stretch = Self.overscrollStretch(
+            restOffset: restOffset, offset: offset, reduceMotion: UIAccessibility.isReduceMotionEnabled)
+        coverImageView.frame.size.height = coverDisplaySize.height + stretch
     }
 
     static func fadeProgress(offset: CGFloat, barHeight: CGFloat, statusBarHeight: CGFloat) -> CGFloat {
         min(1, (offset + barHeight + 2 * statusBarHeight) / Constants.barFadeDistance)
+    }
+
+    /// The extra height the cover gains on overscroll. Suppressed under Reduce Motion, since the
+    /// elastic spring is exactly the kind of decorative motion that setting turns off.
+    static func overscrollStretch(restOffset: CGFloat, offset: CGFloat, reduceMotion: Bool) -> CGFloat {
+        reduceMotion ? 0 : max(0, restOffset - offset)
     }
 
     private func applyBarTransparency() {

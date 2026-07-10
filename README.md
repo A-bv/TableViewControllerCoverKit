@@ -25,7 +25,7 @@ https://github.com/A-bv/TableViewControllerCoverKit
 or declare it in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "7.1.0")
+.package(url: "https://github.com/A-bv/TableViewControllerCoverKit", from: "8.0.0")
 ```
 
 ## Usage
@@ -77,6 +77,7 @@ If you override `viewWillAppear`, `viewWillDisappear`, `viewDidLayoutSubviews`, 
 - **Large covers never stall scrolling.** The image is scaled to fill and rendered off the main thread.
 - **It survives rotation and non-fullscreen scenes** like split view and sheets, re-rendering the cover for the new size.
 - **The navigation bar is left clean.** Its tint is restored when the controller disappears, so the cover's colour never bleeds into the next screen.
+- **Accessible.** The cover is decorative, so VoiceOver skips it, and the overscroll spring is suppressed when Reduce Motion is on.
 
 ## Implementation
 

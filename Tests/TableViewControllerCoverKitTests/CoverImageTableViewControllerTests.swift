@@ -214,6 +214,25 @@ final class CoverImageTableViewControllerTests: XCTestCase {
         XCTAssertNotEqual(before, sut.tableView.contentInset.top)
     }
 
+    func testCover_isHiddenFromVoiceOver() {
+        let sut = makeSUT()
+        sut.setCoverImage(makeImage())
+
+        let cover = sut.tableView.backgroundView?.subviews.first as? UIImageView
+        XCTAssertEqual(cover?.isAccessibilityElement, false)
+    }
+
+    func testOverscrollStretch_isSuppressedUnderReduceMotion() {
+        // Overscrolling past the resting offset stretches the cover, unless Reduce Motion is on.
+        let normal = CoverImageTableViewController.overscrollStretch(
+            restOffset: 0, offset: -120, reduceMotion: false)
+        let reduced = CoverImageTableViewController.overscrollStretch(
+            restOffset: 0, offset: -120, reduceMotion: true)
+
+        XCTAssertGreaterThan(normal, 0)
+        XCTAssertEqual(reduced, 0)
+    }
+
     /// Exercises the real, shipping async render path (the flag left off) that every other test
     /// bypasses by rendering synchronously — guarding a regression that breaks the hop back to the
     /// main actor or never assigns the rendered image.
